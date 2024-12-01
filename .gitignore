@@ -25,3 +25,5 @@ replay_pid*
 dependency-reduced-pom.xml
 .idea/
 target/
+#Inputs should not be on the repositories
+src/main/resources/input_*
