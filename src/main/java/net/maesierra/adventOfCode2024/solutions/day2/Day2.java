@@ -3,14 +3,11 @@ package net.maesierra.adventOfCode2024.solutions.day2;
 import net.maesierra.adventOfCode2024.Main;
 
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsStream;
-import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
 
 public class Day2 implements Main.Solution {
 
