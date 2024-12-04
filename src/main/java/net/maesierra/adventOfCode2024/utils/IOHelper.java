@@ -40,4 +40,8 @@ public class IOHelper {
 
     }
 
+    public static Matrix<Character> inputAsCharMatrix(InputStream input) {
+        return new Matrix<>(inputAsStream(input).map(s -> s.chars().mapToObj(c -> (char) c).toList()));
+    }
+
 }
