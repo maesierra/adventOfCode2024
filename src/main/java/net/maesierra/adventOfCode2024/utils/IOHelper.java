@@ -2,25 +2,27 @@ package net.maesierra.adventOfCode2024.utils;
 
 import org.apache.commons.io.IOUtils;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class IOHelper {
 
     public static String inputAsString(InputStream input) {
         try {
-            return IOUtils.toString(input, StandardCharsets.UTF_8);
+            return IOUtils.toString(input, UTF_8);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     public static Stream<String> inputAsStream(InputStream input) {
-        return IOUtils.readLines(input, StandardCharsets.UTF_8).stream();
+        return IOUtils.readLines(input, UTF_8).stream();
     }
 
     public static Stream<String[]> inputAsStream(InputStream input, Pattern regExp) {
@@ -38,6 +40,14 @@ public class IOHelper {
                 })
                 .filter(groups -> groups.length > 0);
 
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Stream<String>[] inputAsTextBlocks(InputStream input) {
+        String[] blocks = inputAsString(input).split("\\n\\n");
+        return Stream.of(blocks)
+                .map(block -> IOUtils.readLines(new ByteArrayInputStream(block.getBytes(UTF_8)), UTF_8).stream())
+                .toArray(Stream[]::new);
     }
 
     public static Matrix<Character> inputAsCharMatrix(InputStream input) {

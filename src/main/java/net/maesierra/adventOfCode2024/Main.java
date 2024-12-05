@@ -1,5 +1,8 @@
 package net.maesierra.adventOfCode2024;
 
+import net.maesierra.adventOfCode2024.utils.Logger;
+import net.maesierra.adventOfCode2024.utils.Logger.Level;
+
 import java.io.InputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,6 +20,11 @@ public class Main {
     public static void main(String[] args) throws Exception {
         if (args.length < 2) {
             showUsage();
+        }
+        if (Boolean.parseBoolean(System.getProperty("debug", "false"))) {
+            Logger.setLevel(Level.DEBUG);
+        } else {
+            Logger.setLevel(Level.INFO);
         }
         String day = parseArgument(args[0], DAY_PATTERN);
         String part = parseArgument(args[1], PART_PATTERN);
