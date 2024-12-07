@@ -2,6 +2,8 @@ package net.maesierra.adventOfCode2024.utils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class Matrix<T> {
@@ -48,15 +50,18 @@ public class Matrix<T> {
     }
 
     public record Item<T>(int row, int column, T value, Matrix<T> matrix) {
-        public Directions<String> neighbours(int radius) {
-            StringBuilder topLeft = new StringBuilder();
-            StringBuilder top = new StringBuilder();
-            StringBuilder topRight = new StringBuilder();
-            StringBuilder right = new StringBuilder();
-            StringBuilder bottomRight = new StringBuilder();
-            StringBuilder bottom = new StringBuilder();
-            StringBuilder bottomLeft = new StringBuilder();
-            StringBuilder left = new StringBuilder();
+        public Position position() {
+            return new Position(row, column);
+        }
+        public Directions<List<Item<T>>> neighbours(int radius) {
+            List<Item<T>> northWest = new ArrayList<>(radius);
+            List<Item<T>> north = new ArrayList<>(radius);
+            List<Item<T>> northEast = new ArrayList<>(radius);
+            List<Item<T>> east = new ArrayList<>(radius);
+            List<Item<T>> southEast = new ArrayList<>(radius);
+            List<Item<T>> south = new ArrayList<>(radius);
+            List<Item<T>> southWest = new ArrayList<>(radius);
+            List<Item<T>> west = new ArrayList<>(radius);
             for (int i = 0; i < radius; i++) {
                 int row = this.row();
                 int column = this.column();
@@ -64,46 +69,49 @@ public class Matrix<T> {
                 int rowBottom = row + i;
                 int columnLeft = column - i;
                 int columnRight = column + i;
-                if (this.matrix.in(rowTop, columnLeft)) {
-                    topLeft.append(matrix.at(rowTop, columnLeft).value());
+                if (this.matrix.isIn(rowTop, columnLeft)) {
+                    northWest.add(matrix.at(rowTop, columnLeft));
                 }
-                if (this.matrix.in(rowTop, column)) {
-                    top.append(matrix.at(rowTop, column).value());
+                if (this.matrix.isIn(rowTop, column)) {
+                    north.add(matrix.at(rowTop, column));
                 }
-                if (this.matrix.in(rowTop, columnRight)) {
-                    topRight.append(matrix.at(rowTop, columnRight).value());
+                if (this.matrix.isIn(rowTop, columnRight)) {
+                    northEast.add(matrix.at(rowTop, columnRight));
                 }
-                if (this.matrix.in(row, columnRight)) {
-                    right.append(matrix.at(row, columnRight).value());
+                if (this.matrix.isIn(row, columnRight)) {
+                    east.add(matrix.at(row, columnRight));
                 }
-                if (this.matrix.in(rowBottom, columnRight)) {
-                    bottomRight.append(matrix.at(rowBottom, columnRight).value());
+                if (this.matrix.isIn(rowBottom, columnRight)) {
+                    southEast.add(matrix.at(rowBottom, columnRight));
                 }
-                if (this.matrix.in(rowBottom, column)) {
-                    bottom.append(matrix.at(rowBottom, column).value());
+                if (this.matrix.isIn(rowBottom, column)) {
+                    south.add(matrix.at(rowBottom, column));
                 }
-                if (this.matrix.in(rowBottom, columnLeft)) {
-                    bottomLeft.append(matrix.at(rowBottom, columnLeft).value());
+                if (this.matrix.isIn(rowBottom, columnLeft)) {
+                    southWest.add(matrix.at(rowBottom, columnLeft));
                 }
-                if (this.matrix.in(row, columnLeft)) {
-                    left.append(matrix.at(row, columnLeft).value());
+                if (this.matrix.isIn(row, columnLeft)) {
+                    west.add(matrix.at(row, columnLeft));
                 }
             }
             return new Directions<>(
-                    topLeft.toString(),
-                    top.toString(),
-                    topRight.toString(),
-                    right.toString(),
-                    bottomRight.toString(),
-                    bottom.toString(),
-                    bottomLeft.toString(),
-                    left.toString()
+                    northWest,
+                    north,
+                    northEast,
+                    east,
+                    southEast,
+                    south,
+                    southWest,
+                    west
             );
         }
     }
 
-    private Item<T> at(int row, int col) {
+    public Item<T> at(int row, int col) {
         return this.rows.get(row).at(col);
+    }
+    public Item<T> at(Position pos) {
+        return at(pos.row(), pos.col());
     }
 
     private final List<Row<T>> rows;
@@ -122,6 +130,11 @@ public class Matrix<T> {
             this.nCols = 0;
         }
     }
+    public Matrix(Matrix<T> other) {
+        this.rows = other.rows;
+        this.nRows = other.nRows;
+        this.nCols = other.nCols;
+    }
     public Stream<Row<T>> rows() {
         return rows.stream();
     }
@@ -138,7 +151,26 @@ public class Matrix<T> {
         return rows.stream().flatMap(r -> r.items().stream());
     }
 
-    public boolean in(int row, int col) {
+    public boolean isIn(int row, int col) {
         return (row >= 0 && row < this.nRows) && (col >= 0 && col < this.nCols);
+    }
+    public boolean isIn(Position position) {
+        return isIn(position.row(), position.col());
+    }
+
+    public <T2> Matrix<T2> map(Function<Item<T>, T2> mapper) {
+        return new Matrix<>(this.rows()
+                .map(r -> r.items().stream().map(mapper).toList())
+        );
+    }
+
+    public String toString() {
+        return toString(i -> i.value().toString());
+    }
+    public String toString(Function<Item<T>, String> formatter) {
+        return this.rows().map(r -> {
+                    return r.items().stream().map(formatter).collect(Collectors.joining());
+                })
+                .collect(Collectors.joining("\n"));
     }
 }
