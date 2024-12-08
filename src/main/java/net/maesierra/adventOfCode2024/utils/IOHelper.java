@@ -5,6 +5,8 @@ import org.apache.commons.io.IOUtils;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -52,6 +54,10 @@ public class IOHelper {
 
     public static Matrix<Character> inputAsCharMatrix(InputStream input) {
         return new Matrix<>(inputAsStream(input).map(s -> s.chars().mapToObj(c -> (char) c).toList()));
+    }
+
+    public static <T> Space2D<T> inputAsSpace2D(InputStream input, BiFunction<Space2D.Point, Character, T> contentMapper) {
+        return new Space2D<>(inputAsCharMatrix(input), contentMapper);
     }
 
 }
