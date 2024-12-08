@@ -218,13 +218,17 @@ public class Day6 implements Main.Solution {
 
         Grid grid = parseGrid(input);
         final AtomicInteger nLoops = new AtomicInteger(0);
-        List<Step> steps = grid.move(grid.initialPosition(), grid.initialDirection()).steps;
-        for (int i = 0; i < steps.size(); i++) {
+        Path path = grid.move(grid.initialPosition(), grid.initialDirection());
+        Set<Position> used = new HashSet<>();
+        for (int i = 0; i < path.steps.size(); i++) {
             if (i == 0) {
                 continue;
             }
-            Step obstacle = steps.get(i);
-            Step prev = steps.get(i - 1);
+            Step obstacle = path.steps.get(i);
+            if (used.contains(obstacle.position())) {
+                continue;
+            }
+            Step prev = path.steps.get(i - 1);
             grid.at(obstacle.position).value().hasObstacle = true;
             Path pathIfObstacle = grid.move(prev.position, prev.direction);
             if (pathIfObstacle.hasLoop) {
@@ -232,6 +236,7 @@ public class Day6 implements Main.Solution {
                 nLoops.incrementAndGet();
             }
             grid.at(obstacle.position).value().hasObstacle = false;
+            used.add(obstacle.position);
 
         }
         return Integer.toString(nLoops.get());

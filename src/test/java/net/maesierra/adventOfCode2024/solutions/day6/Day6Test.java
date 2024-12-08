@@ -17,16 +17,8 @@ class Day6Test {
 
     @Test
     void  testPart2() {
-        /*
-         *  This should return 1
-         *
-         * .##..
-         * ....#
-         * .....
-         * .^.#.
-         * .....
-         */
         String expected = "6";
         assertThat(part2(new Day6(), "input_6"), equalTo(expected));
+        assertThat(part2(new Day6(), "input_6_alt"), equalTo("1"));
     }
 }
