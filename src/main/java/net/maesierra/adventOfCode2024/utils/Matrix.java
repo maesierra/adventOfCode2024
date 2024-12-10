@@ -53,6 +53,42 @@ public class Matrix<T> {
         public Position position() {
             return new Position(row, column);
         }
+
+        public Directions<Item<T>> orthogonalNeighbours() {
+            Item<T> north = null;
+            Item<T> east = null;
+            Item<T> south = null;
+            Item<T> west = null;
+            int i = 1;
+            int row = this.row();
+            int column = this.column();
+            int rowTop = row - i;
+            int rowBottom = row + i;
+            int columnLeft = column - i;
+            int columnRight = column + i;
+            if (this.matrix.isIn(rowTop, column)) {
+                north = matrix.at(rowTop, column);
+            }
+            if (this.matrix.isIn(row, columnRight)) {
+                east = matrix.at(row, columnRight);
+            }
+            if (this.matrix.isIn(rowBottom, column)) {
+                south = matrix.at(rowBottom, column);
+            }
+            if (this.matrix.isIn(row, columnLeft)) {
+                west = matrix.at(row, columnLeft);
+            }
+            return new Directions<>(
+                    null,
+                    north,
+                    null,
+                    east,
+                    null,
+                    south,
+                    null,
+                    west
+            );
+        }
         public Directions<List<Item<T>>> neighbours(int radius) {
             List<Item<T>> northWest = new ArrayList<>(radius);
             List<Item<T>> north = new ArrayList<>(radius);
