@@ -26,9 +26,10 @@ public class NewDay {
         Path test = Paths.get("./src/test/java/net/maesierra/adventOfCode2024/solutions/day0/Day0Test.java").toAbsolutePath().normalize();
         Integer newDay = FileUtils.listFilesAndDirs(currentDir.toFile(), FALSE, TRUE)
                 .stream().filter(f -> f.getName().startsWith("day"))
+                .map(f -> Integer.parseInt(f.getName().replace("day", "")))
                 .sorted()
                 .reduce((first, second) -> second)
-                .map(f -> 1 + Integer.parseInt(f.getName().replace("day", "")))
+                .map(f -> 1 + f)
                 .orElseThrow();
         File newDaySrcPath = new File(currentDir.toFile(), "day%d".formatted(newDay));
         File newDayTestPath = new File(testDir.toFile(), "day%d".formatted(newDay));
