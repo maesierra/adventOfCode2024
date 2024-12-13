@@ -48,6 +48,7 @@ public record Directions<T>(
                 case NORTH -> WEST;
             };
         }
+
     }
 
     public Stream<T> stream() {
@@ -63,6 +64,7 @@ public record Directions<T>(
         );
 
     }
+
     public T get(Direction direction) {
         return switch (direction) {
             case NORTH_WEST -> northWest;

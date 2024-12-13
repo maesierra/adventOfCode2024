@@ -1,0 +1,40 @@
+package net.maesierra.adventOfCode2024.solutions.day12;
+
+import org.junit.jupiter.api.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+
+import static net.maesierra.adventOfCode2024.testUtils.TestHelper.part1;
+import static net.maesierra.adventOfCode2024.testUtils.TestHelper.part2;
+import static net.maesierra.adventOfCode2024.testUtils.TestHelper.runWithInput;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+
+class Day12Test {
+
+    @Test
+    void  testDraw() {
+        Day12 day12 = new Day12();
+        File f = new File("test.png");
+        System.out.println(runWithInput("input_12_1", (inputStream -> {
+            day12.drawRegions(inputStream, f);
+            return f.getAbsolutePath();
+        })));
+
+    }
+
+    @Test
+    void  testPart1() {
+        assertThat(part1(new Day12(), "input_12_1"), equalTo("140"));
+        assertThat(part1(new Day12(), "input_12_2"), equalTo("772"));
+        assertThat(part1(new Day12(), "input_12_3"), equalTo("1930"));
+    }
+
+    @Test
+    void  testPart2() {
+        String expected = "09:30, 4h 20min, 13:50, 46.00€";
+        assertThat(part2(new Day12(), "input_12"), equalTo(expected));
+    }
+}

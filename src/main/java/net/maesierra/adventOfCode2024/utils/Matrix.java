@@ -3,6 +3,7 @@ package net.maesierra.adventOfCode2024.utils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -49,7 +50,7 @@ public class Matrix<T> {
         }
     }
 
-    public record Item<T>(int row, int column, T value, Matrix<T> matrix) {
+    public record Item<T>(int row, int column, T value, Matrix<T> matrix)  {
         public Position position() {
             return new Position(row, column);
         }
@@ -141,6 +142,57 @@ public class Matrix<T> {
                     west
             );
         }
+
+        public Directions<Item<T>> directNeighbours() {
+            Item<T> northWest = null;
+            Item<T> north = null;
+            Item<T> northEast = null;
+            Item<T> east = null;
+            Item<T> southEast = null;
+            Item<T> south = null;
+            Item<T> southWest = null;
+            Item<T> west = null;
+            int row = this.row();
+            int column = this.column();
+            int rowTop = row - 1;
+            int rowBottom = row + 1;
+            int columnLeft = column - 1;
+            int columnRight = column + 1;
+            if (this.matrix.isIn(rowTop, columnLeft)) {
+                northWest = matrix.at(rowTop, columnLeft);
+            }
+            if (this.matrix.isIn(rowTop, column)) {
+                north = matrix.at(rowTop, column);
+            }
+            if (this.matrix.isIn(rowTop, columnRight)) {
+                northEast = matrix.at(rowTop, columnRight);
+            }
+            if (this.matrix.isIn(row, columnRight)) {
+                east = matrix.at(row, columnRight);
+            }
+            if (this.matrix.isIn(rowBottom, columnRight)) {
+                southEast = matrix.at(rowBottom, columnRight);
+            }
+            if (this.matrix.isIn(rowBottom, column)) {
+                south = matrix.at(rowBottom, column);
+            }
+            if (this.matrix.isIn(rowBottom, columnLeft)) {
+                southWest = matrix.at(rowBottom, columnLeft);
+            }
+            if (this.matrix.isIn(row, columnLeft)) {
+                west = matrix.at(row, columnLeft);
+            }
+            return new Directions<>(
+                    northWest,
+                    north,
+                    northEast,
+                    east,
+                    southEast,
+                    south,
+                    southWest,
+                    west
+            );
+        }
     }
 
     public Item<T> at(int row, int col) {
@@ -208,5 +260,20 @@ public class Matrix<T> {
                     return r.items().stream().map(formatter).collect(Collectors.joining());
                 })
                 .collect(Collectors.joining("\n"));
+    }
+    public static <T> Matrix<T> init(int nRows, int nCols, Supplier<T> initialValue) {
+        List<List<T>> empty = new ArrayList<>(nRows);
+        for (int i = 0; i < nRows; i++) {
+            List<T> row = new ArrayList<>();
+            for (int j = 0; j < nCols; j++) {
+                row.add(initialValue.get());
+            }
+            empty.add(row);
+        }
+        return new Matrix<>(empty.stream());
+    }
+
+    public static <T> Matrix<T> init(int nRows, int nCols, T initialValue) {
+        return init(nRows, nCols, () -> initialValue);
     }
 }

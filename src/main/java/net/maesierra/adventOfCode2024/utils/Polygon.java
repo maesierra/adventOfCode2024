@@ -1,0 +1,34 @@
+package net.maesierra.adventOfCode2024.utils;
+
+import java.util.ArrayList;
+
+public class Polygon extends ArrayList<Position> {
+
+    public record BoundingBox(Position topLeft, Position topRight, Position bottomLeft, Position bottomRight) {
+
+        public int height() {
+            return bottomLeft.row() - topLeft.row();
+        }
+
+        public int width() {
+            return bottomRight.col() - bottomLeft.col();
+        }
+        public BoundingBox(int minRow, int minCol, int maxRow, int maxCol) {
+            this(
+                    new Position(minRow, minCol),
+                    new Position(minRow, maxCol),
+                    new Position(maxRow, minCol),
+                    new Position(maxRow, maxCol)
+            );
+        }
+    }
+    public BoundingBox boundingBox() {
+        int minRow = stream().mapToInt(Position::row).min().orElseThrow();
+        int minCol = stream().mapToInt(Position::col).min().orElseThrow();
+        int maxRow = stream().mapToInt(Position::row).max().orElseThrow();
+        int maxCol = stream().mapToInt(Position::col).max().orElseThrow();
+        return new BoundingBox(minRow, minCol, maxRow, maxCol);
+    }
+
+
+}

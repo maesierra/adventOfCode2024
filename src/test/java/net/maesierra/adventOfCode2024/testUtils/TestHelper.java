@@ -4,24 +4,24 @@ import net.maesierra.adventOfCode2024.Main;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.function.Function;
 
 public class TestHelper {
-    public static String part1(Main.Solution solution, String name, String...params) {
+
+    public static String runWithInput(String name, Function<InputStream, String> run) {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         try (InputStream input = classLoader.getResourceAsStream(name)) {
-            return solution.part1(input, params);
+            return run.apply(input);
         } catch (IOException e) {
             throw  new RuntimeException(e);
         }
     }
+    public static String part1(Main.Solution solution, String name, String...params) {
+        return runWithInput(name, (input) -> solution.part1(input, params));
+    }
 
     public static String part2(Main.Solution solution, String name, String...params) {
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        try (InputStream input = classLoader.getResourceAsStream(name)) {
-            return solution.part2(input, params);
-        } catch (IOException e) {
-            throw  new RuntimeException(e);
-        }
+        return runWithInput(name, (input) -> solution.part2(input, params));
     }
 
 
