@@ -1,6 +1,6 @@
 package net.maesierra.adventOfCode2024.solutions.day8;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 import net.maesierra.adventOfCode2024.utils.Space2D;
 import net.maesierra.adventOfCode2024.utils.Space2D.Line;
 import net.maesierra.adventOfCode2024.utils.Space2D.Point;
@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsSpace2D;
 import static net.maesierra.adventOfCode2024.utils.Space2D.Line.interpolate;
 
-public class Day8 implements Main.Solution {
+public class Day8 implements Runner.Solution {
 
     record Antenna(String frequency, Point position) {
         Stream<Point> antinodes(Antenna a2, int multiplier) {

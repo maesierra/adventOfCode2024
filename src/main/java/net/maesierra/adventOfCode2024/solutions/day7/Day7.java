@@ -1,21 +1,17 @@
 package net.maesierra.adventOfCode2024.solutions.day7;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 import net.maesierra.adventOfCode2024.utils.Logger;
 
 import java.io.InputStream;
-import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsStream;
-import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
 
-public class Day7 implements Main.Solution {
+public class Day7 implements Runner.Solution {
 
 
     record Equation(long result, List<Long> numbers) {

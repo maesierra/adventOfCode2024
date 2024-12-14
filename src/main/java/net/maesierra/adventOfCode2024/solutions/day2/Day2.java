@@ -1,6 +1,6 @@
 package net.maesierra.adventOfCode2024.solutions.day2;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 
 import java.io.InputStream;
 import java.util.Arrays;
@@ -9,7 +9,7 @@ import java.util.stream.Stream;
 
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsStream;
 
-public class Day2 implements Main.Solution {
+public class Day2 implements Runner.Solution {
 
     enum Direction {
         DESC,

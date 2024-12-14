@@ -1,6 +1,6 @@
 package net.maesierra.adventOfCode2024.solutions.day9;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 import net.maesierra.adventOfCode2024.utils.Logger;
 
 import java.io.InputStream;
@@ -13,7 +13,7 @@ import java.util.function.BiFunction;
 
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
 
-public class Day9 implements Main.Solution {
+public class Day9 implements Runner.Solution {
     final static FileId EMPTY = new FileId(-1);
     record FileId(int value) {
         @Override

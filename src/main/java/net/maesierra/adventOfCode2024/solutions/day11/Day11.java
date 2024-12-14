@@ -1,6 +1,6 @@
 package net.maesierra.adventOfCode2024.solutions.day11;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 import net.maesierra.adventOfCode2024.utils.Logger;
 import org.apache.commons.lang3.function.TriFunction;
 
@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
 
-public class Day11 implements Main.Solution {
+public class Day11 implements Runner.Solution {
 
     private final static BigInteger multiplier = new BigInteger("2024");
 

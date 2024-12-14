@@ -1,21 +1,18 @@
 package net.maesierra.adventOfCode2024.solutions.day10;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 import net.maesierra.adventOfCode2024.utils.Matrix;
 import net.maesierra.adventOfCode2024.utils.Matrix.Item;
 
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsCharMatrix;
-import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
 
-public class Day10 implements Main.Solution {
+public class Day10 implements Runner.Solution {
 
     @Override
     public String part1(InputStream input, String... params) {

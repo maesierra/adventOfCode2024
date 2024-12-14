@@ -1,6 +1,6 @@
 package net.maesierra.adventOfCode2024.solutions.day5;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 import net.maesierra.adventOfCode2024.utils.Logger;
 
 import java.io.InputStream;
@@ -17,7 +17,7 @@ import java.util.stream.Stream;
 import static java.lang.Integer.parseInt;
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsTextBlocks;
 
-public class Day5 implements Main.Solution {
+public class Day5 implements Runner.Solution {
 
     record Page(int number, Set<Integer> beforeThan) {
         public Page(int number) {

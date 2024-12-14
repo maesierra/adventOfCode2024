@@ -1,6 +1,6 @@
 package net.maesierra.adventOfCode2024.solutions.day12;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 import net.maesierra.adventOfCode2024.utils.Directions;
 import net.maesierra.adventOfCode2024.utils.Directions.Direction;
 import net.maesierra.adventOfCode2024.utils.Matrix;
@@ -37,7 +37,7 @@ import static net.maesierra.adventOfCode2024.utils.Directions.Direction.WEST;
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsCharMatrix;
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
 
-public class Day12 implements Main.Solution {
+public class Day12 implements Runner.Solution {
 
     static class Plot implements Comparable<Plot> {
         private List<Plot> neighbours = null;
@@ -150,7 +150,12 @@ public class Day12 implements Main.Solution {
         }
 
         List<Polygon> polygons() {
-            List<Direction> rotations = List.of(EAST, SOUTH, WEST, NORTH);
+            Map<Direction, List<Direction>> rotationOrder = Map.of(
+                    EAST, List.of(NORTH, EAST, SOUTH, WEST),
+                    SOUTH, List.of(EAST, SOUTH, WEST, NORTH),
+                    WEST, List.of(SOUTH, WEST, NORTH, EAST),
+                    NORTH, List.of(WEST, NORTH, EAST, SOUTH)
+            );
             List<Polygon> res = new ArrayList<>();
             //Start on the top left position
             int startingRow = plots.stream().mapToInt(p -> p.position().row()).min().orElse(0);
@@ -164,19 +169,27 @@ public class Day12 implements Main.Solution {
                 Position position = new Position(0, 1);
                 polygon.add(position);
                 Plot current = start;
-                toAdd.remove(start.position());
                 boolean closed = false;
                 while (!closed) {
+                    toAdd.remove(current.position());
                     Directions<Plot> neighbours = current.neighboursDirections();
                     boolean canMove = false;
-                    for (int i = 0; i < rotations.size(); i++) {
-                        var rotation = rotations.get(i);
+                    List<Direction> rotations = rotationOrder.get(direction);
+                    for (Direction rotation : rotations) {
                         if (neighbours.get(rotation) != null) {
                             //Can move
-                            int nTurns = Math.abs(i - rotations.indexOf(direction));
-                            switch (nTurns) {
-                                case 2, 3 -> {
+                            int nRotations = rotations.indexOf(rotation) - rotations.indexOf(direction);
+                            switch (nRotations) {
+                                case 2 -> {
                                     position = position.move(1, direction, true);
+                                    polygon.add(position);
+                                    position = position.move(1, direction.rotate90Right(), true);
+                                    polygon.add(position);
+                                }
+                                case 3 -> {
+                                    position = position.move(1, direction, true);
+                                    polygon.add(position);
+                                    position = position.move(1, direction.rotate90Right(), true);
                                     polygon.add(position);
                                     position = position.move(1, direction.rotate90Right(), true);
                                     polygon.add(position);
@@ -197,14 +210,10 @@ public class Day12 implements Main.Solution {
                     polygon.add(position);
                     current = neighbours.get(direction);
 
-//                    if (current.position().equals(start.position())) {
-//                        position = position.move(2, direction, true);
-//                        if (!position.equals(polygon.get(0))) {
-//                            polygon.add(position);
-//                        }
-//                        res.add(polygon);
-//                        closed = true;
-//                    }
+                    if (current.position().equals(start.position())) {
+                        res.add(polygon);
+                        closed = true;
+                    }
                 }
                 toAdd.remove(start.position());
                 if (!toAdd.isEmpty()) {
@@ -215,6 +224,12 @@ public class Day12 implements Main.Solution {
         }
 
         void draw(Graphics2D graphics, Position at, int scale) {
+            Color colour = graphics.getColor();
+            for (var plot: plots) {
+                Position position = plot.position().multiply(scale);
+                graphics.fillRect(position.col(), position.row(), scale, scale);
+            }
+            graphics.setColor(Color.WHITE);
             for (var polygon : polygons()) {
                 for (int i = 0; i < polygon.size(); i++) {
                     Position position = polygon.get(i)
@@ -229,6 +244,7 @@ public class Day12 implements Main.Solution {
                     graphics.drawLine(position.col(), position.row(), next.col(), next.row());
                 }
             }
+            graphics.setColor(colour);
         }
 
         public BoundingBox box() {
@@ -286,13 +302,13 @@ public class Day12 implements Main.Solution {
                 3, Color.MAGENTA,
                 4, Color.RED,
                 5, Color.YELLOW,
-                6, Color.WHITE
+                6, Color.LIGHT_GRAY
         );
         int colour = 0;
         BufferedImage image = new BufferedImage(1000, 1000, TYPE_INT_RGB);
         Graphics2D graphics = image.createGraphics();
         for (var r: regions) {
-            if (!Set.of("C").contains(r.crop)) {
+            if (!Set.of("A", "C").contains(r.crop)) {
                 continue;
             }
             graphics.setColor(colours.get(colour));

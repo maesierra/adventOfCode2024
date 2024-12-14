@@ -1,6 +1,6 @@
 package net.maesierra.adventOfCode2024.solutions.day4;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 import net.maesierra.adventOfCode2024.utils.Matrix;
 import net.maesierra.adventOfCode2024.utils.Directions;
 
@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsCharMatrix;
 
-public class Day4 implements Main.Solution {
+public class Day4 implements Runner.Solution {
 
     @Override
     public String part1(InputStream input, String... params) {

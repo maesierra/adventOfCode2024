@@ -1,6 +1,6 @@
 package net.maesierra.adventOfCode2024.solutions.day1;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsStream;
 
-public class Day1 implements Main.Solution {
+public class Day1 implements Runner.Solution {
 
     public static final Pattern LINE_REGEXP = Pattern.compile("(\\d+) +(\\d+)");
 

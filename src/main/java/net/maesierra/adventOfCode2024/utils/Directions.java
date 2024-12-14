@@ -1,6 +1,8 @@
 package net.maesierra.adventOfCode2024.utils;
 
+import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public record Directions<T>(
@@ -24,6 +26,22 @@ public record Directions<T>(
         SOUTH_WEST,
         WEST;
 
+        private static final Map<Direction, Map<Direction, Integer>> distanceMap = Stream.of(values()).collect(Collectors.toMap(
+            d1 -> d1,
+            d1 -> Stream.of(values()).collect(Collectors.toMap(
+                    d2 -> d2,
+                    d2 -> {
+                        int distance = 0;
+                        Direction current = d1;
+                        while (!d2.equals(current)) {
+                            current = current.rotate45Right();
+                            distance += 45;
+                        }
+                        return distance;
+                    }
+            ))
+        ));
+
         public Direction rotate90Right() {
             return switch (this) {
                 case NORTH_WEST -> NORTH_EAST;
@@ -36,6 +54,20 @@ public record Directions<T>(
                 case WEST -> NORTH;
             };
         }
+
+        public Direction rotate45Right() {
+            return switch (this) {
+                case NORTH_WEST -> NORTH;
+                case NORTH -> NORTH_EAST;
+                case NORTH_EAST -> EAST;
+                case EAST -> SOUTH_EAST;
+                case SOUTH_EAST -> SOUTH;
+                case SOUTH -> SOUTH_WEST;
+                case SOUTH_WEST -> WEST;
+                case WEST -> NORTH_WEST;
+            };
+        }
+
         public Direction rotate90Left() {
             return switch (this) {
                 case NORTH_WEST -> SOUTH_WEST;
@@ -49,6 +81,9 @@ public record Directions<T>(
             };
         }
 
+        public int distance(Direction other) {
+            return distanceMap.get(this).get(other);
+        }
     }
 
     public Stream<T> stream() {

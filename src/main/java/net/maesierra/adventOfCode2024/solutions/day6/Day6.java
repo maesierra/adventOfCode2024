@@ -1,6 +1,6 @@
 package net.maesierra.adventOfCode2024.solutions.day6;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 import net.maesierra.adventOfCode2024.utils.Directions;
 import net.maesierra.adventOfCode2024.utils.Directions.Direction;
 import net.maesierra.adventOfCode2024.utils.Logger;
@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 import static net.maesierra.adventOfCode2024.utils.Directions.Direction.NORTH;
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsCharMatrix;
 
-public class Day6 implements Main.Solution {
+public class Day6 implements Runner.Solution {
 
     static class GridPosition {
         private boolean hasObstacle;

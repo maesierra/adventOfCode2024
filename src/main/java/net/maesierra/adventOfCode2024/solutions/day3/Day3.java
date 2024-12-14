@@ -1,6 +1,6 @@
 package net.maesierra.adventOfCode2024.solutions.day3;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 
 import java.io.InputStream;
 import java.util.regex.MatchResult;
@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
 
-public class Day3 implements Main.Solution {
+public class Day3 implements Runner.Solution {
     public static class Machine {
         private Long accumulator;
         private boolean enabled;

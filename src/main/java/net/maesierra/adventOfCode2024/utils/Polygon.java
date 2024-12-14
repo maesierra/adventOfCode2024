@@ -21,6 +21,11 @@ public class Polygon extends ArrayList<Position> {
                     new Position(maxRow, maxCol)
             );
         }
+
+        public boolean contains(Position position) {
+            return position.row() >= topLeft.row() && position.col() >= topLeft.col() &&
+                   position.row() <= bottomRight.row() && position.col() <= bottomRight.col();
+        }
     }
     public BoundingBox boundingBox() {
         int minRow = stream().mapToInt(Position::row).min().orElseThrow();

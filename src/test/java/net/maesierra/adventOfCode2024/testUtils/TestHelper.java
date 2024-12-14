@@ -1,6 +1,6 @@
 package net.maesierra.adventOfCode2024.testUtils;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,11 +16,11 @@ public class TestHelper {
             throw  new RuntimeException(e);
         }
     }
-    public static String part1(Main.Solution solution, String name, String...params) {
+    public static String part1(Runner.Solution solution, String name, String...params) {
         return runWithInput(name, (input) -> solution.part1(input, params));
     }
 
-    public static String part2(Main.Solution solution, String name, String...params) {
+    public static String part2(Runner.Solution solution, String name, String...params) {
         return runWithInput(name, (input) -> solution.part2(input, params));
     }
 

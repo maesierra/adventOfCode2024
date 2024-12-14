@@ -1,20 +1,18 @@
 package net.maesierra.adventOfCode2024.solutions.day13;
 
-import net.maesierra.adventOfCode2024.Main;
+import net.maesierra.adventOfCode2024.Runner;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
-import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsTextBlocks;
 
-public class Day13 implements Main.Solution {
+public class Day13 implements Runner.Solution {
 
     private final static Pattern REGEXP= Pattern.compile("A: X\\+(\\d+), Y\\+(\\d+).*B: X\\+(\\d+), Y\\+(\\d+).*X=(\\d+), Y=(\\d+)", Pattern.DOTALL);
     private final static BigDecimal CONVERSION = new BigDecimal("10000000000000");
