@@ -15,17 +15,6 @@ import static org.hamcrest.Matchers.equalTo;
 class Day12Test {
 
     @Test
-    void  testDraw() {
-        Day12 day12 = new Day12();
-        File f = new File("test.png");
-        System.out.println(runWithInput("input_12_1", (inputStream -> {
-            day12.drawRegions(inputStream, f);
-            return f.getAbsolutePath();
-        })));
-
-    }
-
-    @Test
     void  testPart1() {
         assertThat(part1(new Day12(), "input_12_1"), equalTo("140"));
         assertThat(part1(new Day12(), "input_12_2"), equalTo("772"));

@@ -3,7 +3,11 @@ package net.maesierra.adventOfCode2024;
 import net.maesierra.adventOfCode2024.utils.Logger;
 
 import java.awt.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -39,8 +43,11 @@ public abstract class Runner {
         }
         String day = parseArgument(args[0], DAY_PATTERN);
         String part = parseArgument(args[1], PART_PATTERN);
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        try (InputStream input = classLoader.getResourceAsStream("input_%s".formatted(day))) {
+        Optional<File> inputFile = Optional.empty();
+        if (args.length == 4 && args[2].equals("--file")) {
+            inputFile = Optional.of(new File(args[3]));
+        }
+        try (InputStream input = getInput(day, inputFile)) {
             if (input == null) {
                 System.err.println("input_% not found".formatted(day));
             }
@@ -50,8 +57,18 @@ public abstract class Runner {
 
     }
 
+    private static InputStream getInput(String day, Optional<File> inputFile) {
+        return inputFile.map(f -> {
+            try {
+                return (InputStream)new FileInputStream(f);
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        }).orElseGet( () -> Thread.currentThread().getContextClassLoader().getResourceAsStream("input_%s".formatted(day)));
+    }
+
     private static void showUsage() {
-        System.err.println("Usage java -jar <file> dayN part1|part2");
+        System.err.println("Usage java -jar <file> dayN part1|part2 [--inputFile <inputFile>]");
     }
 
     private static String parseArgument(String arg, Pattern pattern) {

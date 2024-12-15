@@ -24,6 +24,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -165,8 +167,8 @@ public class Day12 implements Runner.Solution {
             Direction direction = EAST;
             while (!toAdd.isEmpty()) {
                 Polygon polygon = new Polygon();
-                polygon.add(new Position(0, 0));
-                Position position = new Position(0, 1);
+                //polygon.add(new Position(0, 0));
+                Position position = new Position(0, 0);
                 polygon.add(position);
                 Plot current = start;
                 boolean closed = false;
@@ -178,20 +180,26 @@ public class Day12 implements Runner.Solution {
                     for (Direction rotation : rotations) {
                         if (neighbours.get(rotation) != null) {
                             //Can move
-                            int nRotations = rotations.indexOf(rotation) - rotations.indexOf(direction);
-                            switch (nRotations) {
-                                case 2 -> {
+                            switch (direction.distance(rotation)) {
+                                case 0 -> {
+                                    direction = rotation;
                                     position = position.move(1, direction, true);
-                                    polygon.add(position);
-                                    position = position.move(1, direction.rotate90Right(), true);
                                     polygon.add(position);
                                 }
-                                case 3 -> {
+                                case 90 -> {
+                                    position = position.move(1, direction, true);
+                                    polygon.add(position);
+                                    direction = rotation;
+                                    position = position.move(1, direction, true);
+                                    polygon.add(position);
+                                }
+                                case 180 -> {
                                     position = position.move(1, direction, true);
                                     polygon.add(position);
                                     position = position.move(1, direction.rotate90Right(), true);
                                     polygon.add(position);
-                                    position = position.move(1, direction.rotate90Right(), true);
+                                    direction = rotation;
+                                    position = position.move(1, direction, true);
                                     polygon.add(position);
                                 }
                             }
@@ -201,16 +209,22 @@ public class Day12 implements Runner.Solution {
                         }
                     }
                     if (!canMove) {
-                        polygon.remove(polygon.size() - 1);
+                        //This should be only possible for the 1x1
+                        polygon.add(new Position(0, 1));
+                        polygon.add(new Position(1, 1));
+                        polygon.add(new Position(1, 0));
+                        res.add(polygon);
                         closed = true;
                         continue;
                     }
                     //Move
-                    position = position.move(1, direction, true);
-                    polygon.add(position);
                     current = neighbours.get(direction);
 
                     if (current.position().equals(start.position())) {
+                        if (direction == WEST) {
+                            position = position.move(1, direction, true);
+                            polygon.add(position);
+                        }
                         res.add(polygon);
                         closed = true;
                     }
@@ -293,34 +307,35 @@ public class Day12 implements Runner.Solution {
         return Long.toString(res);
     }
 
-    public void drawRegions(InputStream input, File output) {
+    @Override
+    public Consumer<Graphics2D> visualisePart1(InputStream input, String... params) {
         List<Region> regions = parseRegions(input);
-        Map<Integer, Color> colours = Map.of(
-                0, Color.BLUE,
-                1, Color.CYAN,
-                2, Color.GREEN,
-                3, Color.MAGENTA,
-                4, Color.RED,
-                5, Color.YELLOW,
-                6, Color.LIGHT_GRAY
-        );
-        int colour = 0;
-        BufferedImage image = new BufferedImage(1000, 1000, TYPE_INT_RGB);
-        Graphics2D graphics = image.createGraphics();
-        for (var r: regions) {
-            if (!Set.of("A", "C").contains(r.crop)) {
-                continue;
+        AtomicInteger colour = new AtomicInteger();
+        Map<Region, Color> regionColour = regions.stream().collect(Collectors.toMap(
+                r -> r,
+                r -> switch (colour.getAndIncrement() % 6) {
+                    case 0 ->Color.BLUE;
+                    case 1 ->Color.CYAN;
+                    case 2 ->Color.GREEN;
+                    case 3 ->Color.MAGENTA;
+                    case 4 ->Color.RED;
+                    case 5 ->Color.YELLOW;
+                    default -> Color.LIGHT_GRAY;
+                }));
+
+        return (graphics) -> {
+            graphics.setColor(Color.BLACK);
+            graphics.fillRect(0, 0, 1000, 1000);
+            for (var r: regions) {
+//                if (!Set.of("D").contains(r.crop)) {
+//                    continue;
+//                }
+                graphics.setColor(regionColour.get(r));
+                r.draw(graphics, r.box().topLeft(), 50);
             }
-            graphics.setColor(colours.get(colour));
-            r.draw(graphics, r.box().topLeft(), 50);
-            colour = (colour + 1) % 6;
-        }
-        try {
-            ImageIO.write(image, "png", output);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        };
     }
+
 
     @Override
     public String part2(InputStream input, String... params) {
