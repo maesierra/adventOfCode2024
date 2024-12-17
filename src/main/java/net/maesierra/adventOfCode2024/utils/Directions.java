@@ -1,9 +1,12 @@
 package net.maesierra.adventOfCode2024.utils;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static net.maesierra.adventOfCode2024.utils.Directions.Direction.NORTH;
 
 public record Directions<T>(
         T northWest,
@@ -55,6 +58,19 @@ public record Directions<T>(
             };
         }
 
+        public Direction rotate180() {
+            return switch (this) {
+                case NORTH_WEST -> SOUTH_EAST;
+                case NORTH -> SOUTH;
+                case NORTH_EAST -> SOUTH_WEST;
+                case EAST -> WEST;
+                case SOUTH_EAST -> NORTH_WEST;
+                case SOUTH -> NORTH;
+                case SOUTH_WEST -> NORTH_EAST;
+                case WEST -> EAST;
+            };
+        }
+
         public Direction rotate45Right() {
             return switch (this) {
                 case NORTH_WEST -> NORTH;
@@ -83,6 +99,16 @@ public record Directions<T>(
 
         public int distance(Direction other) {
             return distanceMap.get(this).get(other);
+        }
+
+        public static Direction fromPosition(Position p1, Position p2) {
+            int rowDiff = p2.row() - p1.row();
+            int colDiff = p2.col() - p1.col();
+            if (rowDiff == 0) {
+                return  colDiff > 0 ? EAST : WEST;
+            } else {
+                return  rowDiff > 0 ? SOUTH : NORTH;
+            }
         }
     }
 
@@ -125,4 +151,18 @@ public record Directions<T>(
                 mapper.apply(west)
         );
     }
+    
+    public Map<Direction, T> asMap(boolean onlyPresent) {
+        Map<Direction, T> res = new HashMap<>();
+        if (!onlyPresent || northWest() != null) { res.put(Direction.NORTH_WEST, northWest()); }
+        if (!onlyPresent || north() != null) { res.put(Direction.NORTH, north()); }
+        if (!onlyPresent || northEast() != null) { res.put(Direction.NORTH_EAST, northEast()); }
+        if (!onlyPresent || east() != null) { res.put(Direction.EAST, east()); }
+        if (!onlyPresent || southEast() != null) { res.put(Direction.SOUTH_EAST, southEast()); }
+        if (!onlyPresent || south() != null) { res.put(Direction.SOUTH, south()); }
+        if (!onlyPresent || southWest() != null) { res.put(Direction.SOUTH_WEST, southWest()); }
+        if (!onlyPresent || west() != null) { res.put(Direction.WEST, west()); }
+        return res;
+    }
+    
 }
