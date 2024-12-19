@@ -1,45 +1,124 @@
 package net.maesierra.adventOfCode2024.solutions.day12;
 
 import net.maesierra.adventOfCode2024.Runner;
-import net.maesierra.adventOfCode2024.utils.Directions;
+import net.maesierra.adventOfCode2024.utils.*;
 import net.maesierra.adventOfCode2024.utils.Directions.Direction;
-import net.maesierra.adventOfCode2024.utils.Matrix;
 import net.maesierra.adventOfCode2024.utils.Matrix.Item;
 import net.maesierra.adventOfCode2024.utils.Polygon;
 import net.maesierra.adventOfCode2024.utils.Polygon.BoundingBox;
-import net.maesierra.adventOfCode2024.utils.Position;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.awt.image.BufferedImage.TYPE_INT_RGB;
 import static java.util.Comparator.comparing;
+import static java.util.Map.entry;
 import static java.util.stream.Collectors.toCollection;
-import static net.maesierra.adventOfCode2024.utils.Directions.Direction.EAST;
-import static net.maesierra.adventOfCode2024.utils.Directions.Direction.NORTH;
-import static net.maesierra.adventOfCode2024.utils.Directions.Direction.SOUTH;
-import static net.maesierra.adventOfCode2024.utils.Directions.Direction.WEST;
+import static net.maesierra.adventOfCode2024.solutions.day12.Day12.CornerShape.NORTH_EAST_SOUTH;
+import static net.maesierra.adventOfCode2024.solutions.day12.Day12.CornerShape.NORTH_EAST_WEST;
+import static net.maesierra.adventOfCode2024.solutions.day12.Day12.CornerShape.WEST_EAST;
+import static net.maesierra.adventOfCode2024.solutions.day12.Day12.CornerShape.WEST_EAST_SOUTH;
+import static net.maesierra.adventOfCode2024.solutions.day12.Day12.CornerShape.WEST_NORTH;
+import static net.maesierra.adventOfCode2024.solutions.day12.Day12.CornerShape.WEST_SOUTH;
+import static net.maesierra.adventOfCode2024.solutions.day12.Day12.CornerShape.NORTH_SOUTH_WEST;
+import static net.maesierra.adventOfCode2024.solutions.day12.Day12.CornerShape.EAST_SOUTH;
+import static net.maesierra.adventOfCode2024.solutions.day12.Day12.CornerShape.NORTH_SOUTH;
+import static net.maesierra.adventOfCode2024.utils.Directions.Direction.*;
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsCharMatrix;
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
 
 public class Day12 implements Runner.Solution {
+
+    enum CornerShape {
+        NORTH_EAST_SOUTH,
+        NORTH_SOUTH_WEST,
+        NORTH_EAST_WEST,
+        WEST_EAST_SOUTH,
+        WEST_NORTH,
+        NORTH_EAST,
+        NORTH_SOUTH,
+        WEST_SOUTH,
+        WEST_EAST,
+        EAST_SOUTH,
+        NORTH,
+        WEST,
+        EAST,
+        SOUTH,
+        ALL, NONE
+    }
+    private static final Map<Set<Direction>, CornerShape> neighboursMap = Map.ofEntries(
+            // ...
+            // .x.  =>  ┌─┐
+            // .x.
+            entry(Set.of(SOUTH), NORTH_EAST_WEST),
+            // ...       ─┐
+            // xx.  =>   ─┘
+            // ...
+            entry(Set.of(WEST), NORTH_EAST_SOUTH),
+            // ...       ┌─
+            // xx.  =>   └─
+            // ...
+            entry(Set.of(EAST), NORTH_SOUTH_WEST),
+            // .x.
+            // .x.  =>  └─┘
+            // ...
+            entry(Set.of(NORTH), WEST_EAST_SOUTH),
+            // ...
+            // .xx  =>  ┌─
+            // .x.
+            entry(Set.of(EAST, SOUTH), WEST_NORTH),
+            // ...
+            // xx.  =>  ─┐
+            // .x.
+            entry(Set.of(SOUTH, WEST), CornerShape.NORTH_EAST),
+            // .x.
+            // xx.  =>   ─┘
+            // ...
+            entry(Set.of(WEST, NORTH), EAST_SOUTH),
+            // .x.
+            // .xx  =>  └─
+            // ...
+            entry(Set.of(NORTH, EAST), WEST_SOUTH),
+            // .x.
+            // .x.  =>  │ │
+            // .x.
+            entry(Set.of(NORTH, SOUTH), WEST_EAST),
+            // ...       ─
+            // xxx  =>   ─
+            // ...
+            entry(Set.of(EAST, WEST), NORTH_SOUTH),
+            // .x.
+            // .xx  =>  │
+            // .x.
+            entry(Set.of(NORTH, SOUTH, EAST), CornerShape.WEST),
+            // .x.
+            // xx.  =>   │
+            // .x.
+            entry(Set.of(NORTH, SOUTH, WEST), CornerShape.EAST),
+            // .x.
+            // xxx  =>   ─
+            // ...
+            entry(Set.of(EAST, WEST, NORTH), CornerShape.SOUTH),
+            // ...
+            // xxx  =>   ─
+            // .x.
+            entry(Set.of(EAST, WEST, SOUTH), CornerShape.NORTH),
+            // .X.
+            // xxx  =>
+            // .x.
+            entry(Set.of(EAST, WEST, SOUTH, NORTH), CornerShape.NONE),
+            // ...
+            // .x.  => ┌─┐
+            // ...     └─┘
+            entry(Set.of(), CornerShape.ALL)
+    );
+
+
 
     static class Plot implements Comparable<Plot> {
         private List<Plot> neighbours = null;
@@ -58,7 +137,11 @@ public class Day12 implements Runner.Solution {
         }
 
         public Directions<Plot> neighboursDirections() {
-            return point.directNeighbours().map(p -> {
+            return neighboursDirections(false);
+        }
+
+        public Directions<Plot> neighboursDirections(boolean orthogonal) {
+            return (orthogonal ? point.orthogonalNeighbours() : point.directNeighbours()).map(p -> {
                 if (p != null && p.value().toString().equals(crop())) {
                     return new Plot(p);
                 } else {
@@ -80,6 +163,9 @@ public class Day12 implements Runner.Solution {
                 return neighbours().filter(p -> p.position().row() == position().row() || p.position().col() == position().col());
             }
 
+        }
+        public CornerShape fenceShape() {
+            return neighboursMap.get(neighboursDirections(true).asMap(true).keySet());
         }
 
         private Position position() {
@@ -112,8 +198,8 @@ public class Day12 implements Runner.Solution {
     }
 
     static class Region {
-        private String crop;
-        private List<Plot> plots;
+        private final String crop;
+        private final List<Plot> plots;
 
         Region(String crop) {
             this.crop = crop;
@@ -128,15 +214,9 @@ public class Day12 implements Runner.Solution {
             return plots.size();
         }
 
-        long perimiter() {
-            return plots.stream()
-                    .reduce(0L,
-                            ((sum, plot) ->  sum + (4 - plot.neighbours(true).count())),
-                            (a, b) -> a);
-        }
-
-        long cost() {
-            return area() * perimiter();
+        long cost(boolean discounted) {
+            long perimeter = polygons(discounted).stream().mapToInt(ArrayList::size).sum();
+            return area() * perimeter;
         }
 
         boolean contains(Position position) {
@@ -151,91 +231,294 @@ public class Day12 implements Runner.Solution {
             return plots.stream().filter(p -> p.position().equals(position)).findFirst();
         }
 
-        List<Polygon> polygons() {
-            Map<Direction, List<Direction>> rotationOrder = Map.of(
-                    EAST, List.of(NORTH, EAST, SOUTH, WEST),
-                    SOUTH, List.of(EAST, SOUTH, WEST, NORTH),
-                    WEST, List.of(SOUTH, WEST, NORTH, EAST),
-                    NORTH, List.of(WEST, NORTH, EAST, SOUTH)
-            );
+        List<Polygon> polygons(boolean simplified) {
+            Logger.debug("Generating polygons for crop %s", this.crop);
             List<Polygon> res = new ArrayList<>();
             //Start on the top left position
             int startingRow = plots.stream().mapToInt(p -> p.position().row()).min().orElse(0);
-            Set<Position> toAdd = plots.stream().map(Plot::position).collect(Collectors.toSet());
+            //Track the number of points that are expected in each position
+            class PointsTracker {
+                final Map<Position, Integer> map = new HashMap<>();
+                void trackPosition(Position position, CornerShape shape) {
+                    if (map.containsKey(position)) {
+                        return;
+                    }
+                    map.put(position, switch (shape) {
+                        case NONE -> 0;
+                        case NORTH,SOUTH,EAST,WEST -> 2;
+                        case NORTH_EAST, WEST_NORTH, WEST_SOUTH, EAST_SOUTH -> 3;
+                        default -> 4;
+                    });
+                }
+                void pointsUsed(Position position, Integer n) {
+                    if (!map.containsKey(position)) {
+                        return;
+                    }
+                    map.put(position, map.get(position) - n);
+                }
+                boolean isNotCompleted() {
+                    return map.values().stream().anyMatch(v -> v > 0);
+                }
+                Position next() {
+                    Map<Position, Integer> available = map.entrySet().stream()
+                            .filter(e -> e.getValue() > 0)
+                            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                    return map.entrySet().stream()
+                            .filter(e -> e.getValue() > 0)
+                            .map(Map.Entry::getKey)
+                            .min(Comparator.naturalOrder())
+                            .orElseThrow();
+                }
+
+            }
+            var tracker = new PointsTracker();
+            plots.forEach(p -> tracker.trackPosition(p.position(), p.fenceShape()));
             Plot start = plots.stream().filter(p -> p.position().row() == startingRow).min(comparing(p -> p.position().col())).orElseThrow();
-            //first to the right
-            Direction direction = EAST;
-            while (!toAdd.isEmpty()) {
+            boolean outward = true;
+            while (tracker.isNotCompleted()) {
                 Polygon polygon = new Polygon();
-                //polygon.add(new Position(0, 0));
-                Position position = new Position(0, 0);
-                polygon.add(position);
+                Direction direction = outward ? EAST : WEST;
                 Plot current = start;
                 boolean closed = false;
                 while (!closed) {
-                    toAdd.remove(current.position());
-                    Directions<Plot> neighbours = current.neighboursDirections();
-                    boolean canMove = false;
-                    List<Direction> rotations = rotationOrder.get(direction);
-                    for (Direction rotation : rotations) {
-                        if (neighbours.get(rotation) != null) {
-                            //Can move
-                            switch (direction.distance(rotation)) {
-                                case 0 -> {
-                                    direction = rotation;
-                                    position = position.move(1, direction, true);
-                                    polygon.add(position);
+                    Objects.requireNonNull(current);
+                    Position topLeft = current.position().add(-start.position().row(), -start.position().col());
+                    Position topRight = new Position(topLeft.row(), topLeft.col() + 1);
+                    Position bottomRight = new Position(topLeft.row() + 1, topLeft.col() + 1);
+                    Position bottomLeft = new Position(topLeft.row() + 1, topLeft.col());
+                    CornerShape cornerShape = current.fenceShape();
+                    switch (cornerShape) {
+                        case NORTH_EAST_WEST -> {
+                            polygon.add(bottomLeft);
+                            polygon.add(topLeft);
+                            polygon.add(topRight);
+                            polygon.add(bottomRight);
+                            tracker.pointsUsed(current.position(), 4);
+                            direction = SOUTH;
+                        }
+                        case WEST_EAST_SOUTH -> {
+                            polygon.add(topRight);
+                            polygon.add(bottomRight);
+                            polygon.add(bottomLeft);
+                            polygon.add(topLeft);
+                            tracker.pointsUsed(current.position(), 4);
+                            direction = NORTH;
+                        }
+                        case NORTH_EAST_SOUTH -> {
+                            polygon.add(topLeft);
+                            polygon.add(topRight);
+                            polygon.add(bottomRight);
+                            polygon.add(bottomLeft);
+                            tracker.pointsUsed(current.position(), 4);
+                            direction = WEST;
+                        }
+                        case NORTH_SOUTH_WEST -> {
+                            polygon.add(bottomRight);
+                            polygon.add(bottomLeft);
+                            polygon.add(topLeft);
+                            polygon.add(topRight);
+                            tracker.pointsUsed(current.position(), 4);
+                            direction = EAST;
+                        }
+                        case NORTH_SOUTH -> {
+                            if (direction.equals(EAST)) {
+                                polygon.add(topLeft);
+                                polygon.add(topRight);
+                                tracker.pointsUsed(current.position(), 2);
+                            } else  {
+                                polygon.add(bottomRight);
+                                polygon.add(bottomLeft);
+                                tracker.pointsUsed(current.position(), 2);
+                            }
+                        }
+                        case WEST_EAST -> {
+                            if (direction.equals(SOUTH)) {
+                                polygon.add(topRight);
+                                polygon.add(bottomRight);
+                                tracker.pointsUsed(current.position(), 2);
+                            } else  {
+                                polygon.add(bottomLeft);
+                                polygon.add(topLeft);
+                                tracker.pointsUsed(current.position(), 2);
+                            }
+                        }
+                        case WEST_NORTH -> {
+                            switch (direction) {
+                                //EAST is a special case as this could be a starting title
+                                case NORTH, EAST -> {
+                                    direction = EAST;
+                                    polygon.add(bottomLeft);
+                                    polygon.add(topLeft);
+                                    polygon.add(topRight);
+                                    tracker.pointsUsed(current.position(), 3);
                                 }
-                                case 90 -> {
-                                    position = position.move(1, direction, true);
-                                    polygon.add(position);
-                                    direction = rotation;
-                                    position = position.move(1, direction, true);
-                                    polygon.add(position);
-                                }
-                                case 180 -> {
-                                    position = position.move(1, direction, true);
-                                    polygon.add(position);
-                                    position = position.move(1, direction.rotate90Right(), true);
-                                    polygon.add(position);
-                                    direction = rotation;
-                                    position = position.move(1, direction, true);
-                                    polygon.add(position);
+                                case WEST -> {
+                                    direction = SOUTH;
                                 }
                             }
-                            direction = rotation;
-                            canMove = true;
-                            break;
                         }
-                    }
-                    if (!canMove) {
-                        //This should be only possible for the 1x1
-                        polygon.add(new Position(0, 1));
-                        polygon.add(new Position(1, 1));
-                        polygon.add(new Position(1, 0));
-                        res.add(polygon);
-                        closed = true;
-                        continue;
-                    }
-                    //Move
-                    current = neighbours.get(direction);
+                        case WEST_SOUTH -> {
+                            if (direction.equals(SOUTH)) {
+                                direction = EAST;
+                            } else if (direction.equals(WEST)) {
+                                direction = NORTH;
+                                polygon.add(bottomRight);
+                                polygon.add(bottomLeft);
+                                polygon.add(topLeft);
+                                tracker.pointsUsed(current.position(), 3);
+                            }
+                        }
+                        case NORTH_EAST -> {
+                            if (direction.equals(NORTH)) {
+                                direction = WEST;
+                            } else if (direction.equals(EAST)) {
+                                polygon.add(topLeft);
+                                polygon.add(topRight);
+                                polygon.add(bottomRight);
+                                tracker.pointsUsed(current.position(), 3);
+                                direction = SOUTH;
+                            }
+                        }
+                        case EAST_SOUTH -> {
+                            if (direction.equals(SOUTH)) {
+                                polygon.add(topRight);
+                                polygon.add(bottomRight);
+                                polygon.add(bottomLeft);
+                                tracker.pointsUsed(current.position(), 3);
+                                direction = WEST;
+                            } else if (direction.equals(EAST)) {
+                                direction = NORTH;
+                            }
+                        }
+                        case NORTH -> {
+                            if (direction.equals(NORTH)) {
+                                direction = WEST;
+                            } else if (direction.equals(WEST)) {
+                                direction = SOUTH;
+                            } else if (direction.equals(EAST)) {
+                                polygon.add(topLeft);
+                                polygon.add(topRight);
+                                tracker.pointsUsed(current.position(), 2);
+                            }
+                        }
+                        case SOUTH -> {
+                            if (direction.equals(EAST)) {
+                                direction = NORTH;
+                            } else if (direction.equals(SOUTH)) {
+                                direction = EAST;
+                            } else if (direction.equals(WEST)) {
+                                polygon.add(bottomRight);
+                                polygon.add(bottomLeft);
+                                tracker.pointsUsed(current.position(), 2);
+                            }
+                        }
+                        case EAST -> {
+                            if (direction.equals(EAST)) {
+                                direction = NORTH;
+                            } else if (direction.equals(NORTH)) {
+                                direction = WEST;
+                            } else if (direction.equals(SOUTH)) {
+                                polygon.add(topRight);
+                                polygon.add(bottomRight);
+                                tracker.pointsUsed(current.position(), 2);
+                            }
+                        }
+                        case WEST -> {
+                            if (direction.equals(SOUTH)) {
+                                direction = EAST;
+                            } else if (direction.equals(WEST)) {
+                                direction = SOUTH;
+                            } else if (direction.equals(NORTH)) {
+                                polygon.add(bottomLeft);
+                                polygon.add(topLeft);
+                                tracker.pointsUsed(current.position(), 2);
+                            }
+                        }
+                        case ALL -> {
+                            polygon.add(topLeft);
+                            polygon.add(topRight);
+                            polygon.add(bottomRight);
+                            polygon.add(bottomLeft);
+                            tracker.pointsUsed(current.position(), 4);
+                        }
+                        case NONE -> {
+                            switch (direction) {
+                                case SOUTH -> direction = EAST;
+                                case EAST -> direction = NORTH;
+                                case NORTH -> direction = WEST;
+                                case WEST -> direction = SOUTH;
+                            }
+                        }
 
-                    if (current.position().equals(start.position())) {
-                        if (direction == WEST) {
-                            position = position.move(1, direction, true);
-                            polygon.add(position);
+                    }
+                    current = current.neighboursDirections().get(direction);
+                    if (current == null || current.equals(start)) {
+                        //some edge cases
+                        if (start.fenceShape().equals(WEST_NORTH) && direction.equals(WEST)) {
+                            closed = false;
+                        } else {
+                            closed = true;
                         }
-                        res.add(polygon);
-                        closed = true;
                     }
                 }
-                toAdd.remove(start.position());
-                if (!toAdd.isEmpty()) {
-                    start = getAt(toAdd.iterator().next()).orElseThrow();
+                //Adjust the polygon to start in 0,0
+                List<Position> endTail = new ArrayList<>();
+                if (outward) {
+                    while (!polygon.get(0).equals(Position.ZERO_ZERO)) {
+                        endTail.add(polygon.get(0));
+                        polygon.remove(0);
+                    }
+                    for (var p : endTail) {
+                        polygon.add(p);
+                    }
                 }
+                if (polygon.isEmpty()) {
+                    throw new RuntimeException("Invalid polygon");
+                }
+                if (polygon.last().equals(polygon.first())) {
+                    polygon.remove(polygon.last());
+                }
+                //Validate the polygon
+                if (!validatePolygon(polygon)) {
+                    throw new RuntimeException("Invalid polygon");
+                }
+                if (tracker.isNotCompleted()) {
+                    //Inner cuts
+                    start = getAt(tracker.next()).orElseThrow();
+                    outward  = false;
+                }
+
+                res.add(polygon);
+
+            }
+            Logger.debug("%d Polygons generated for region %s", res.size(), this.crop);
+            if (simplified) {
+                res = res.stream().map(polygon -> {
+                    Polygon newPolygon = new Polygon();
+                    Polygon side = new Polygon();
+                    side.add(polygon.first());
+                    newPolygon.add(side.first());
+                    Direction currentDirection = EAST;
+                    for (int i = 1; i <= polygon.size(); i++) {
+                        Position position = i == polygon.size() ? polygon.first() : polygon.get(i);
+                        Direction direction = fromPosition(side.last(), position);
+                        if (direction.equals(currentDirection)) {
+                            side.add(position);
+                        } else {
+                            Position last = side.last();
+                            newPolygon.add(last);
+                            side = new Polygon();
+                            side.add(last);
+                            side.add(position);
+                            currentDirection = direction;
+                        }
+                    }
+                    return newPolygon;
+                }).toList();
             }
             return res;
         }
+
 
         void draw(Graphics2D graphics, Position at, int scale) {
             Color colour = graphics.getColor();
@@ -244,7 +527,8 @@ public class Day12 implements Runner.Solution {
                 graphics.fillRect(position.col(), position.row(), scale, scale);
             }
             graphics.setColor(Color.WHITE);
-            for (var polygon : polygons()) {
+            List<Polygon> polygons = polygons(false);
+            for (var polygon : polygons) {
                 for (int i = 0; i < polygon.size(); i++) {
                     Position position = polygon.get(i)
                             .add(at.row(), at.col())
@@ -279,7 +563,7 @@ public class Day12 implements Runner.Solution {
             toProcess.remove(plot);
             Region region = new Region(plot.crop());
             region.add(plot);
-            regions.add(region);;
+            regions.add(region);
             Deque<Plot> neighbours = plot.neighbours(true)
                     .filter(toProcess::contains)
                     .collect(toCollection(ArrayDeque::new));
@@ -299,11 +583,37 @@ public class Day12 implements Runner.Solution {
         return regions;
     }
 
+    private static boolean validatePolygon(Polygon polygon) {
+        for (int i = 0; i < polygon.size(); i++) {
+            Position p1 = polygon.get(i);
+            Position p2 = i == polygon.size() - 1 ? polygon.get(0) : polygon.get(i + 1);
+            boolean res =  switch (Direction.fromPosition(p1, p2)) {
+                case EAST -> p1.row() == p2.row() && p1.col() == p2.col() - 1;
+                case WEST -> p1.row() == p2.row() && p1.col() == p2.col() + 1;
+                case NORTH -> p1.col() == p2.col() && p1.row() == p2.row() + 1;
+                case SOUTH -> p1.col() == p2.col() && p1.row() == p2.row() - 1;
+                default -> throw new RuntimeException("Invalid polygon");
+            };
+            if (!res) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     public String part1(InputStream input, String... params) {
         List<Region> regions = parseRegions(input);
         Long res = regions.stream()
-                .reduce(0L, (sum, r) -> sum + r.cost(), (a, b) -> a);
+                .reduce(0L, (sum, r) -> sum + r.cost(false), (a, b) -> a);
+        return Long.toString(res);
+    }
+
+    @Override
+    public String part2(InputStream input, String... params) {
+        List<Region> regions = parseRegions(input);
+        Long res = regions.stream()
+                .reduce(0L, (sum, r) -> sum + r.cost(true), (a, b) -> a);
         return Long.toString(res);
     }
 
@@ -336,9 +646,4 @@ public class Day12 implements Runner.Solution {
         };
     }
 
-
-    @Override
-    public String part2(InputStream input, String... params) {
-        return inputAsString(input).toLowerCase();
-    }
 }

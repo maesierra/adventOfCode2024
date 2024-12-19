@@ -6,6 +6,8 @@ import java.util.Objects;
 
 public record Position(int row, int col) implements Comparable<Position> {
 
+    public final static Position ZERO_ZERO = new Position(0, 0);
+
     @Override
     public int hashCode() {
         return Objects.hash(row, col);
@@ -36,6 +38,9 @@ public record Position(int row, int col) implements Comparable<Position> {
         return new Position(row + dr, col + dc);
     }
 
+    public Position moveOrthogonally(int distance, Direction direction) {
+        return move(distance, direction, true);
+    }
     public Position move(int distance, Direction direction, boolean orthogonalOnly) {
         return switch (direction) {
             case NORTH_EAST -> orthogonalOnly ? this : new Position(row - distance, col + distance);

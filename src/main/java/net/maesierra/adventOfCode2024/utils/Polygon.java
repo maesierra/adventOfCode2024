@@ -4,6 +4,26 @@ import java.util.ArrayList;
 
 public class Polygon extends ArrayList<Position> {
 
+    @Override
+    public boolean add(Position position) {
+        if (isEmpty()) {
+            return super.add(position);
+        }
+        Position current = get(size() - 1);
+        if (current.equals(position)) {
+            return false;
+        }
+        return super.add(position);
+    }
+
+    public Position last() {
+        return get(size() - 1);
+    }
+
+    public Position first() {
+        return get(0);
+    }
+
     public record BoundingBox(Position topLeft, Position topRight, Position bottomLeft, Position bottomRight) {
 
         public int height() {

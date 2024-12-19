@@ -49,7 +49,7 @@ public abstract class Runner {
         }
         try (InputStream input = getInput(day, inputFile)) {
             if (input == null) {
-                System.err.println("input_% not found".formatted(day));
+                System.err.println("input_%s not found".formatted(day));
             }
             Runner.Solution solution = (Runner.Solution) Class.forName("net.maesierra.adventOfCode2024.solutions.day%s.Day%s".formatted(day, day)).getDeclaredConstructor().newInstance();
             runWithInput.accept(new RunData(solution, day, part), input);
@@ -68,7 +68,7 @@ public abstract class Runner {
     }
 
     private static void showUsage() {
-        System.err.println("Usage java -jar <file> dayN part1|part2 [--inputFile <inputFile>]");
+        System.err.println("Usage java -jar <file> dayN part1|part2 [--file <inputFile>]");
     }
 
     private static String parseArgument(String arg, Pattern pattern) {

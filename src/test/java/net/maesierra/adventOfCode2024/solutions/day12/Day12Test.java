@@ -23,7 +23,6 @@ class Day12Test {
 
     @Test
     void  testPart2() {
-        String expected = "09:30, 4h 20min, 13:50, 46.00€";
-        assertThat(part2(new Day12(), "input_12"), equalTo(expected));
+        assertThat(part2(new Day12(), "input_12_1"), equalTo("80"));
     }
 }
