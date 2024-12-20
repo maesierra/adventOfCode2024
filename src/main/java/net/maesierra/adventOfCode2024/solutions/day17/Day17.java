@@ -3,24 +3,19 @@ package net.maesierra.adventOfCode2024.solutions.day17;
 import net.maesierra.adventOfCode2024.Runner;
 import net.maesierra.adventOfCode2024.solutions.day17.Day17.Computer.Registers;
 import net.maesierra.adventOfCode2024.utils.Logger;
-import org.apache.commons.lang3.Range;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.Map.entry;
-import static java.util.Objects.requireNonNull;
 import static net.maesierra.adventOfCode2024.solutions.day17.Day17.OperandType.COMBO;
 import static net.maesierra.adventOfCode2024.solutions.day17.Day17.OperandType.LITERAL;
-import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsTextBlocks;
 
 public class Day17 implements Runner.Solution {
@@ -243,104 +238,46 @@ public class Day17 implements Runner.Solution {
         computer.run();
         return String.join(",", computer.output);
     }
-
-    @Override
     public String part2(InputStream input, String... params) {
         Computer computer = parseInput(input);
-        // 8^15 35184372088832L
-        // 8^16 281474976710656L -1L
-        //15 == 0 -> [141659617525749?, 175921860444159]
-        //13 == 3 -> [162728209444743?, 167126238924668?], [171524541534773?, 175921860444159]
-        //1st with 0 => 141659617525749?
-        //
-        //Last with 0 => 176171205157951?
-        //                   175891124106544L
-        long min = params.length > 1 ? Long.parseLong(params[0]) : 141659617525749L;
-        long max = params.length > 2 ? Long.parseLong(params[1]) : 175921860444159L;
+        //By understanding the program we know that
+        //Each iteration a is divided by 8. If we want 16 outputs -> 16 cycles
+        //Output is the value of b after some operations with a and c. But it only takes into account the last 3 bits of a value
+        //eg in iteration 16 we know that a must be between zero and 8 (3 bits number)
+        //   that number must be zero (the output on iteration 16)
+        //if we go to the previous iteration that number will become the most significant bits
+
         List<String> expectedOutput = computer.program.opcodes.stream()
                 .flatMap(o -> Stream.of(o.instruction, o.operand))
                 .map(i -> Integer.toString(i))
                 .toList();
-        Map<Integer, Map<String, Integer>> counts = new TreeMap<>(Map.ofEntries(
-                entry(0, new HashMap<>()),
-                entry(1, new HashMap<>()),
-                entry(2, new HashMap<>()),
-                entry(3, new HashMap<>()),
-                entry(4, new HashMap<>()),
-                entry(5, new HashMap<>()),
-                entry(6, new HashMap<>()),
-                entry(7, new HashMap<>()),
-                entry(8, new HashMap<>()),
-                entry(9, new HashMap<>()),
-                entry(10, new HashMap<>()),
-                entry(11, new HashMap<>()),
-                entry(12, new HashMap<>()),
-                entry(13, new HashMap<>()),
-                entry(14, new HashMap<>()),
-                entry(15, new HashMap<>())
-        ));
-        class Range {
-            String value;
-            long start;
-            long end;
-
-            @Override
-            public String toString() {
-                return "%s [%d, %d]".formatted(value, start, end);
-            }
-        }
-        List<Range> ranges = new ArrayList<>();
-        Range currentRange = new Range();
-        ranges.add(currentRange);
-        currentRange.start = min;
-        currentRange.value = "4";
-
-        Random r = new Random();
-        long n = 0;
-        int randomStep = 1000000000;
-        long fixedStep = 0L;
-        Supplier<Long> stepRandom = () -> r.nextLong(randomStep);
-        Supplier<Long> fixed = () -> 1L;
-        for (long i = min; i <= max; i+=stepRandom.get() + fixedStep,n++) {
-          computer.reset();
-          computer.registers.a = i;
-          //We break if any run has more items in the output than the expected size
-          computer.run(c -> c.output.size() > expectedOutput.size());
-          if (computer.output.equals(expectedOutput)) {
-              return Long.toString(i);
-          }
-            if (computer.output.size() == 16 && !computer.output.get(15).equals("0")) {
-                System.out.println(i + "(not good)=>" + String.join(",", computer.output));
-            }
-            if (computer.output.size() == 16) {
-                if (!computer.output.get(14).equals(currentRange.value)) {
-                    currentRange.end = i - 1;
-                    currentRange = new Range();
-                    ranges.add(currentRange);
-                    currentRange.value = computer.output.get(14);
-                    currentRange.start = i;
+        Deque<Long> values = new ArrayDeque<>();
+        values.add(0L);
+        for (int i = expectedOutput.size() - 1; i >= 0; i--) {
+            List<String> output = expectedOutput.subList(i, expectedOutput.size());
+            List<Long> res = new ArrayList<>();
+            while (!values.isEmpty()) {
+                long currentValue = (values.pop() << 3);
+                for (int n = 0; n < 8; n++) {
+                    computer.reset();
+                    computer.registers.a = currentValue + n;
+                    computer.run();
+                    if (computer.output.equals(output)) {
+                        res.add(currentValue + n);
+                    }
                 }
             }
-            if (n % 10000 == 0) {
-                System.out.println("Processing %d".formatted(i));
-                System.out.println(i + "=>" + String.join(",", computer.output));
-            }
-            for (int j = 0; j < computer.output.size(); j++) {
-                if (!counts.containsKey(j)) {
-                    continue;
-                }
-                String value = computer.output.get(j);
-                counts.get(j).put(value, counts.get(j).getOrDefault(value, 0) + 1);
-            }
-
+            values.addAll(res);
         }
-        currentRange.end = max;
-        System.out.println(ranges.stream().filter(r1 -> r1.value.equals("3")).toList());
-        System.out.println(counts);
-        System.out.println(counts.entrySet().stream().collect(Collectors.toMap(
-                Map.Entry::getKey,
-             e -> e.getValue().get(expectedOutput.get(e.getKey()))
-        )));
-        throw new RuntimeException("No solution found in range");
+        for (var l:values.stream().sorted().toList()){
+            computer.reset();
+            computer.registers.a = l;
+            computer.run();
+            if (computer.output.equals(expectedOutput)) {
+                return Long.toString(l);
+            }
+        };
+        throw new RuntimeException("No solution found!!!");
     }
+
 }
