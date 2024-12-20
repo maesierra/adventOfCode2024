@@ -55,6 +55,11 @@ public class Matrix<T> {
             return new Position(row, column);
         }
 
+        public boolean isEdge() {
+            return row    == 0 ||    row == matrix.nRows() - 1 ||
+                   column == 0 || column == matrix.nCols() - 1;
+        }
+
         public Directions<Item<T>> orthogonalNeighbours() {
             Item<T> north = null;
             Item<T> east = null;

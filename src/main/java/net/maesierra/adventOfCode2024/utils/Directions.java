@@ -110,6 +110,13 @@ public record Directions<T>(
                 return  rowDiff > 0 ? SOUTH : NORTH;
             }
         }
+
+        public boolean isOrthogonal() {
+            return switch (this) {
+                case NORTH, SOUTH, WEST, EAST -> true;
+                case SOUTH_WEST,NORTH_EAST,NORTH_WEST,SOUTH_EAST -> false;
+            };
+        }
     }
 
     public Stream<T> stream() {
