@@ -211,6 +211,7 @@ public class Matrix<T> {
     private final int nRows;
     private final int nCols;
 
+
     public Matrix(Stream<List<T>> rows) {
         this.rows = rows.reduce(new ArrayList<>(), (r, s) -> {
             r.add(new Row<>(r.size(), s, this));
