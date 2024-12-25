@@ -233,6 +233,13 @@ public class Matrix<T> {
         return rows.stream();
     }
 
+
+    public Row<T> row(int row) {
+        return rows.get(row);
+    }
+
+
+
     public int nRows() {
         return nRows;
     }
