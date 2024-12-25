@@ -2,7 +2,8 @@
   <configuration default="false" name="Main P1" type="Application" factoryName="Application" folderName="New Folder">
     <option name="MAIN_CLASS_NAME" value="net.maesierra.adventOfCode2024.Main" />
     <module name="advent-of-code-2024" />
-    <option name="PROGRAM_PARAMETERS" value="day23 part1" />
+    <option name="PROGRAM_PARAMETERS" value="day24 part1" />
+    <option name="VM_PARAMETERS" value="-Xmx6048m" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="net.maesierra.adventOfCode2024.*" />
