@@ -17,7 +17,7 @@ class Day15Test {
 
     @Test
     void  testPart2() {
-        assertThat(part2(new Day15(), "input_15_3"), equalTo("105"));
-        assertThat(part2(new Day15(), "input_15_1"), equalTo("9021"));
+        assertThat(part2(new Day15(), "input_15_2"), equalTo("9021"));
+        assertThat(part2(new Day15(), "input_15_3"), equalTo("618"));
     }
 }

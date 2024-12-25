@@ -9,7 +9,7 @@ import static javax.swing.SwingUtilities.invokeLater;
 
 public class Visualise extends Runner{
 
-    private static final int SPEED = 5000;
+    private static final int SPEED = 500;
 
     public static void main(String[] args) {
         invokeLater(() -> {
@@ -30,7 +30,7 @@ public class Visualise extends Runner{
 
 
 
-                    frame.setSize(1000, 1000);
+                    frame.setSize(2000, 1800);
                     frame.setVisible(true);
                     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 

@@ -1,19 +1,23 @@
 package net.maesierra.adventOfCode2024.solutions.day15;
 
 import net.maesierra.adventOfCode2024.Runner;
-import net.maesierra.adventOfCode2024.utils.Directions;
 import net.maesierra.adventOfCode2024.utils.Directions.Direction;
 import net.maesierra.adventOfCode2024.utils.Logger;
 import net.maesierra.adventOfCode2024.utils.Matrix;
 import net.maesierra.adventOfCode2024.utils.Matrix.Item;
+import net.maesierra.adventOfCode2024.utils.Position;
 
+import java.awt.*;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
+import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
+import static net.maesierra.adventOfCode2024.solutions.day15.Day15.HalfPart.LEFT;
+import static net.maesierra.adventOfCode2024.solutions.day15.Day15.HalfPart.RIGHT;
 import static net.maesierra.adventOfCode2024.utils.Directions.Direction.*;
 import static net.maesierra.adventOfCode2024.utils.IOHelper.*;
 
@@ -39,21 +43,29 @@ public class Day15 implements Runner.Solution {
         }
     }
 
-    static class BigBoxLeft implements TileContent {
-        private BigBoxRight right = null;
+    enum HalfPart {
+        LEFT,
+        RIGHT;
+    }
+    static class BigBoxHalf implements TileContent {
+        HalfPart part;
+        int id;
+
+        public BigBoxHalf(int id, HalfPart part) {
+            this.part = part;
+            this.id = id;
+        }
+        
+        boolean sameBox(BigBoxHalf other) {
+            return this.id == other.id;
+        }
+
         @Override
         public String toString() {
-            return "[";
+            return part == LEFT ? "[" : "]";
         }
     }
 
-    static class BigBoxRight implements TileContent {
-        private BigBoxLeft leftt = null;
-        @Override
-        public String toString() {
-            return "]";
-        }
-    }
 
     static class Tile {
         private TileContent content;
@@ -75,10 +87,7 @@ public class Day15 implements Runner.Solution {
         }
 
         public boolean containsBigBox() {
-            return containsBigBoxLeft() || content instanceof BigBoxRight;
-        }
-        public boolean containsBigBoxLeft() {
-            return content instanceof BigBoxLeft;
+            return content instanceof BigBoxHalf;
         }
 
         boolean isEmpty() {
@@ -88,6 +97,10 @@ public class Day15 implements Runner.Solution {
         @Override
         public String toString() {
             return content == null ? "." : content.toString();
+        }
+        @SuppressWarnings("unchecked")
+        <T extends TileContent> T content(Class<T> clazz) {
+            return (T) content;
         }
     }
 
@@ -126,58 +139,97 @@ public class Day15 implements Runner.Solution {
             Item<Tile> nextTile = robot.orthogonalNeighbours().get(direction);
             if (nextTile.value().containsObstacle()) {
                 return;
-            } else if (nextTile.value().isEmpty()) {
+            }
+            if (nextTile.value().isEmpty()) {
                 moveTileContent(robot, nextTile);
-                return;
             } else if (nextTile.value().containsBox()) {
-                pushSmallBox(nextTile, direction);
-                moveTileContent(robot, nextTile);
+                if (pushSmallBox(nextTile, direction)) {
+                    moveTileContent(robot, nextTile);
+                }
             } else if (nextTile.value().containsBigBox()) {
-                switch (direction) {
+                boolean moved = switch (direction) {
                     case EAST, WEST -> pushBigBoxHorizontally(nextTile, direction);
                     case NORTH, SOUTH -> pushBigBoxVertically(nextTile, direction);
+                    default -> throw new RuntimeException("Unexpected value: " + direction);
+                };
+                if (moved) {
+                    moveTileContent(robot, nextTile);
                 }
-                moveTileContent(robot, nextTile);
             }
         }
 
-        private void pushBigBoxVertically(Item<Tile> boxTile1, Direction direction) {
+        private boolean pushBigBoxVertically(Item<Tile> boxTile1, Direction direction) {
             record Pair(Item<Tile> left, Item<Tile> right) {
-                Pair(Item<Tile> tile) {
-                    this(
-                       tile.value().containsBigBoxLeft() ? tile : tile.orthogonalNeighbours().get(WEST),
-                       tile.value().containsBigBoxLeft() ? tile.orthogonalNeighbours().get(EAST) : tile
-                    );
-                }
-            }
-            Deque<Pair> queue = new ArrayDeque<>();
-            queue.add(new Pair(boxTile1));
-            record Movement(Pair from, Pair to) {
 
             }
-            //TODO:
-            // Use the link property do determine if the 2 tiles over/bellow a bigbox contain the same box or 2 different boxes
-            // if same box: add to queue (kill pair, we only need left item)
-            // if different: add both to the queue
-            // if wall found / null found -> stop movement
-            // if queue emtpy -> allow movement
-            // keep movements list to execute them
+            Deque<Pair> queue = new ArrayDeque<>();
+            //Check if tile is the right part or the left part of the bigbox
+            if (boxTile1.value().content(BigBoxHalf.class).part == LEFT) {
+                queue.add(new Pair(boxTile1, boxTile1.orthogonalNeighbours().east()));
+            } else {
+                queue.add(new Pair(boxTile1.orthogonalNeighbours().west(), boxTile1));
+            }
+            record Movement(Pair from, Pair to) {
+
+                @Override
+                public String toString() {
+                    return "[(%s),(%s)] => [(%s),(%s)]".formatted(from.left.position(), from.right.position(), to.left.position(), to.right.position());
+                }
+            }
+            Set<Pair> processed = new HashSet<>();
             List<Movement> movements = new ArrayList<>();
             while (!queue.isEmpty()) {
                 Pair current = queue.pop();
-                Item<Tile> nextLeft = current.left.orthogonalNeighbours().get(direction);
-                Item<Tile> nextRight = current.right.orthogonalNeighbours().get(direction);
+                if (processed.contains(current)) {
+                    continue;
+                }
+                processed.add(current);
+                var nextLeft = current.left.orthogonalNeighbours().get(direction);
+                var nextRight =current.right.orthogonalNeighbours().get(direction);
                 //The box can only move if both parts can be moved
-                if (nextRight != null && nextRight.value().containsBigBox() && nextLeft != null && nextLeft.value().containsBigBox()) {
-                    movements.add(new Movement(current, new Pair(nextLeft, nextRight)));
+                boolean leftCanMove = nextLeft != null && !nextLeft.value().containsObstacle();
+                boolean rightCanMove = nextRight != null && !nextRight.value().containsObstacle();
+                if (!leftCanMove || !rightCanMove) {
+                    return false;
+                }
+                //Check if both spaces are empty
+                Pair nextPair = new Pair(nextLeft, nextRight);
+                if (nextRight.value().isEmpty() && nextLeft.value().isEmpty()) {
+                    movements.add(new Movement(current, nextPair));
+                } else if (nextRight.value().containsBigBox() && nextLeft.value().containsBigBox()) {
+                    //Both parts touch bigboxes
+                    if (nextRight.value().content(BigBoxHalf.class).sameBox(nextLeft.value().content(BigBoxHalf.class))) {
+                        //Only one box
+                        movements.add(new Movement(current, nextPair));
+                        queue.addLast(nextPair);
+                    } else {
+                        //Two boxes
+                        movements.add(new Movement(current, nextPair));
+                        queue.addLast(new Pair(nextLeft.orthogonalNeighbours().west(), nextLeft));
+                        queue.addLast(new Pair(nextRight, nextRight.orthogonalNeighbours().east()));
+                    }
+                } else if (nextRight.value().containsBigBox() && nextLeft.value().isEmpty()) {
+                    //box at right, empty at left
+                    movements.add(new Movement(current, nextPair));
+                    queue.addLast(new Pair(nextRight, nextRight.orthogonalNeighbours().east()));
+                } else if (nextLeft.value().containsBigBox() && nextRight.value().isEmpty()) {
+                    //box at left, empty at right
+                    movements.add(new Movement(current, nextPair));
+                    queue.addLast(new Pair(nextLeft.orthogonalNeighbours().west(), nextLeft));
+                } else {
+                    throw new RuntimeException("Invalid state");
                 }
             }
-
-
-
+            //If the queue was emptied -> there is space to execute the movement
+            Collections.reverse(movements);
+            for (var movement:movements) {
+                moveTileContent(movement.from.left, movement.to.left);
+                moveTileContent(movement.from.right, movement.to.right);
+            }
+            return true;
         }
 
-        private void pushSmallBox(Item<Tile> nextTile, Direction direction) {
+        private boolean pushSmallBox(Item<Tile> nextTile, Direction direction) {
             //Time to push boxes, we get the line of boxes in the direction
             Item<Tile> current = nextTile;
             while (current != null && current.value().containsBox()) {
@@ -187,10 +239,13 @@ public class Day15 implements Runner.Solution {
             if (current != null && current.value().isEmpty()) {
                 //because all the boxes are the same we could just swap the first with the empty space
                 moveTileContent(nextTile, current);
+                return true;
+            } else {
+                return false;
             }
         }
 
-        private void pushBigBoxHorizontally(Item<Tile> nextTile, Direction direction) {
+        private boolean pushBigBoxHorizontally(Item<Tile> nextTile, Direction direction) {
             List<Item<Tile>> boxes = new ArrayList<>();
             Item<Tile> current = nextTile;
             while (current != null && current.value().containsBigBox()) {
@@ -205,29 +260,30 @@ public class Day15 implements Runner.Solution {
                     moveTileContent(box, current);
                     current = box;
                 }
+                return true;
+            } else {
+                return false;
             }
         }
     }
 
     private static Warehouse parseInput(String block) {
+        AtomicInteger idGenerator = new AtomicInteger(0);
+        Map<Position, Integer> bigBoxes = new HashMap<>();
         Matrix<Tile> matrix = inputAsCharMatrix(new ByteArrayInputStream(block.getBytes())).map(i -> {
             return new Tile(switch (i.value().toString()) {
                 case "#" -> new Obstacle();
                 case "@" -> new Robot();
                 case "O" -> new Box();
-                case "[" -> new BigBoxLeft();
-                case "]" -> new BigBoxRight();
+                case "[" -> {
+                    BigBoxHalf bigBox = new BigBoxHalf(idGenerator.getAndIncrement(), LEFT);
+                    bigBoxes.put(i.position(), bigBox.id);
+                    yield bigBox;
+                }
+                case "]" -> new BigBoxHalf(bigBoxes.get(i.orthogonalNeighbours().west().position()), RIGHT);
                 default -> null;
             });
         });
-        matrix.items().filter(i -> i.value().containsBigBoxLeft())
-                .forEach(i -> {
-                    Tile tile = i.value();
-                    BigBoxLeft leftPart = (BigBoxLeft) tile.content;
-                    BigBoxRight rightPart = (BigBoxRight) i.orthogonalNeighbours().get(EAST).value().content;
-                    leftPart.right = rightPart;
-                    rightPart.leftt = leftPart;
-                });
         return new Warehouse(matrix);
     }
 
@@ -259,17 +315,64 @@ public class Day15 implements Runner.Solution {
                 .replace("@",  "@.");
 
         Warehouse warehouse = parseInput(map);
-        System.out.println(warehouse.tiles);
         movements.chars().forEachOrdered(c -> {
             warehouse.moveRobot((char)c);
             Logger.debug("%s", warehouse.tiles.toString());
         });
 
         int res = warehouse.tiles.items()
-                .filter(i -> i.value().containsBox())
+                .filter(i -> i.value().containsBigBox() && i.value().content(BigBoxHalf.class).part == LEFT)
                 .mapToInt(i -> i.position().row() * 100 + i.position().col())
                 .sum();
+        Logger.info("%s", warehouse.tiles.toString());
         return Integer.toString(res);
 
+    }
+
+    @Override
+    public Consumer<Graphics2D> visualisePart2(InputStream input, String... params) {
+        String[] blocks = inputAsString(input).split("\\n\\n");
+        Deque<Character> movements = blocks[1].chars().mapToObj(c -> (char)c).collect(Collectors.toCollection(ArrayDeque::new));
+        String map = blocks[0]
+                .replace("#", "##")
+                .replace("O", "[]")
+                .replace(".", "..")
+                .replace("@",  "@.");
+        Warehouse warehouse = parseInput(map);
+        int nMovements = movements.size();
+        for (int i = 0; i < 1618; i++) {
+            warehouse.moveRobot(movements.pop());
+        }
+        return graphics -> {
+            if (!movements.isEmpty()) {
+                warehouse.moveRobot(movements.pop());
+                warehouse.tiles.items().forEach(i -> {
+                    int tileSize = 16;
+                    int halfTileSize = tileSize / 2;
+                    var position = i.position().multiply(tileSize);
+                    if (i.value().containsObstacle()) {
+                        graphics.setColor(Color.RED);
+                        graphics.fillRect(position.col(), position.row(), tileSize, tileSize);
+                    } else if (i.value().containsRobot()) {
+                        graphics.setColor(Color.GREEN);
+                        graphics.fillRect(position.col(), position.row(), tileSize, tileSize);
+                    } else {
+                        if (i.value().containsBigBox() && i.value().content(BigBoxHalf.class).part == LEFT) {
+                            graphics.setColor(Color.YELLOW);
+                            graphics.fillRect(position.col() + halfTileSize, position.row(), halfTileSize, tileSize);
+                        } else if (i.value().containsBigBox() && i.value().content(BigBoxHalf.class).part == RIGHT) {
+                            graphics.setColor(Color.YELLOW);
+                            graphics.fillRect(position.col(), position.row(), halfTileSize, tileSize);
+                        }
+                    }
+                });
+                graphics.setRenderingHint(
+                        RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                Font font = new Font("Serif", Font.PLAIN, 20);
+                graphics.setFont(font);
+                graphics.drawString("Move: %d".formatted(nMovements - movements.size()), 10, 40);
+            }
+        };
     }
 }
