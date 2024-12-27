@@ -2,222 +2,57 @@ package net.maesierra.adventOfCode2024.solutions.day16;
 
 import net.maesierra.adventOfCode2024.Runner;
 import net.maesierra.adventOfCode2024.utils.Directions.Direction;
+import net.maesierra.adventOfCode2024.utils.Logger;
 import net.maesierra.adventOfCode2024.utils.Matrix;
-import net.maesierra.adventOfCode2024.utils.Matrix.Item;
 import net.maesierra.adventOfCode2024.utils.Position;
 import org.jgrapht.Graph;
+import org.jgrapht.GraphPath;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DefaultDirectedWeightedGraph;
 import org.jgrapht.graph.DefaultWeightedEdge;
 
 import java.io.InputStream;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import static java.util.Comparator.comparing;
 import static net.maesierra.adventOfCode2024.utils.Directions.Direction.EAST;
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsCharMatrix;
-import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
 
 public class Day16 implements Runner.Solution {
 
 
-
-    record Movement(Position from, Position to, Direction direction, int cost) {
-
-    }
-
-    record Path(List<Movement> steps) {
-
-        Path(Movement first) {
-            this(new ArrayList<>());
-            steps.add(first);
-        }
-
-        public Path(Path path, Movement m) {
-            this(new ArrayList<>(path.steps));
-            steps.add(m);
-        }
-
-        public Path(Path path1, Path path2) {
-            this(new ArrayList<>(path1.steps));
-            List<Movement> path2Movements = new ArrayList<>(path2.steps);
-            while (!path1.end().to.equals(path2Movements.get(0).from)) {
-                path2Movements.remove(path2Movements.get(0));
-            }
-            steps.addAll(path2Movements);
-        }
-
-        Movement end() {
-            return steps.get(steps.size() - 1);
-        }
-
-        boolean inPath(Position position) {
-            return steps.stream()
-                    .anyMatch(m -> m.from.equals(position));
-        }
-
-        Movement at(Position position) {
-            return steps.stream()
-                    .filter(m -> m.from.equals(position))
-                    .findFirst()
-                    .orElseThrow();
-        }
-
-        Path cut(Position from) {
-            for (int i = 0; i < steps.size(); i++) {
-                if (steps.get(i).from.equals(from)) {
-                    if (i == 0) {
-                        return this;
-                    }
-                    return new Path(steps.subList(i, steps.size()));
-                }
-            }
-            return this;
-        }
-        long cost() {
-            return steps.stream().mapToLong(Movement::cost).sum();
-        }
-
-        @Override
-        public String toString() {
-            String res = steps.stream().map(m -> "[%d,%d]%s".formatted(
-                    m.from.row(),
-                    m.from.col(),
-                    switch (m.direction()) {
-                        case NORTH -> '^';
-                        case SOUTH -> 'v';
-                        case EAST -> '>';
-                        case WEST -> '<';
-                        default -> "";
-                    }))
-                    .collect(Collectors.joining());
-            Position endPosition = end().to;
-            return res + "[%d,%d]".formatted(endPosition.row(), endPosition.col());
-        }
-    }
-    class Cache {
-        private final Map<Key, Entry> hashMap = new HashMap<>();
-        private Path bestPath = null;
-        private Long bestCost = Long.MAX_VALUE;
-
-        record Key(Position from, Direction direction) {
-
-            public Key(Movement movement) {
-                this(movement.from, movement.direction);
-            }
-        }
-
-        record Entry(Map<Direction, Path> costs, int expectedEntries, boolean partial) {
-            boolean isCompleted() {
-                return !partial && costs.size() == expectedEntries;
-            }
-            public void put(Direction direction, Path path) {
-                if (!costs.containsKey(direction)) {
-                    costs.put(direction, path);
-                } else {
-                    long current = costs.get(direction).cost();
-                    if (path.cost() < current) {
-                        costs.put(direction, path);
-                    }
-                }
-            }
-            public Optional<Path> best() {
-                return costs.values().stream().min(Comparator.comparing(Path::cost));
-            }
-        }
-        public void newEntry(Movement current, List<Movement> possibleMovements) {
-            int expectedEntries = 3;
-            Set<Direction> directions = possibleMovements.stream().map(Movement::direction).collect(Collectors.toSet());
-            if (!directions.contains(current.direction)) {
-                expectedEntries --;
-            }
-            if (!directions.contains(current.direction.rotate90Right())) {
-                expectedEntries --;
-            }
-            if (!directions.contains(current.direction.rotate90Left())) {
-                expectedEntries --;
-            }
-            Key key = new Key(current);
-            this.hashMap.put(key, new Entry(new HashMap<>(), expectedEntries, false));
-        }
-
-        public void updateIfBest(Path path) {
-            System.out.println("Path found at %d".formatted(path.cost()));
-            if (bestPath == null) {
-                bestPath = path;
-                bestCost = path.cost();
-            } else {
-                if (path.cost() < bestPath.cost()) {
-                    bestPath = path;
-                    bestCost = path.cost();
-                }
-            }
-        }
-
-        public void updatePaths(Path path) {
-            for (int i = path.steps.size() - 1; i >= 0; i--) {
-                Movement m = path.steps.get(i);
-                Path subPath = path.cut(m.from);
-                Key key = new Key(m);
-                Entry cacheEntry = this.hashMap.get(key);
-                if (cacheEntry == null) {
-                    continue;
-                }
-                Path current = cacheEntry.costs.get(m.direction);
-                if (current == null || subPath.cost() < current.cost()) {
-                    cacheEntry.put(m.direction, subPath);
-                }
-                if (!cacheEntry.isCompleted()) {
-                    break;
-                }
-
-            }
-        }
-        Optional<Entry> getIfCompleted(Movement movement) {
-            Key key = new Key(movement);
-            if (!hashMap.containsKey(key)) {
-                return Optional.empty();
-            }
-            Entry entry = hashMap.get(key);
-            return entry.isCompleted() ? Optional.of(entry) : Optional.empty();
-        }
-
-    }
-
-
-
-
-
-    static List<Movement> possibleMovements(Position position, Direction direction, Matrix<Character> map) {
-        List<Movement> res = new ArrayList<>();
-        Map<Direction, Item<Character>> neighbours = map.at(position).orthogonalNeighbours().asMap(true);
-        for (var entry: neighbours.entrySet()) {
-            if (entry.getValue().value() == '#') {
-                continue;
-            }
-            int rotationDistance = entry.getKey().distance(direction);
-            if (rotationDistance == 180) {
-                continue;
-            }
-            int cost = switch (rotationDistance) {
-                case 90,270 -> 1001;
+    record Node(Position position, Direction direction) {
+        int cost(Node other) {
+            int distance = Node.this.direction.distance(other.direction);
+            return switch (distance) {
                 case 0 -> 1;
-                default -> throw new RuntimeException("Invalid rotation");
+                //make 180 turns much more expensive to discourage them
+                case 180 -> 100000;
+                default -> 1001;
             };
-
-            res.add(new Movement(position, entry.getValue().position(), entry.getKey(), cost));
         }
-        res.sort(comparing(Movement::cost).reversed());
-        return res;
 
     }
 
-    record Destinations(Position start, Position end) {
+    record MazeMap(Matrix<Character> map, Position start, Position end) {
 
+        public Matrix.Item<Character> at(Position pos) {
+            return map.at(pos);
+        }
+
+        public <T2> Matrix<T2> map(Function<Matrix.Item<Character>, T2> mapper) {
+            return map.map(mapper);
+        }
+
+        public Stream<Matrix.Item<Character>> items() {
+            return map.items();
+        }
     }
 
-    private static Destinations destinations(Matrix<Character> map) {
+    private static MazeMap parseMap(InputStream input) {
+        Matrix<Character> map = inputAsCharMatrix(input);
         Position start = null;
         Position end = null;
         for (var i: map.items().toList()) {
@@ -226,97 +61,13 @@ public class Day16 implements Runner.Solution {
                 case 'E' -> end = i.position();
             }
         }
-        return new Destinations(start, end);
+        return new MazeMap(map, start, end);
     }
 
-
-    @Override
-    public String part1(InputStream input, String... params) {
-        return usingGraph(input);
-    }
-
-    private String usingQueue(InputStream input) {
-        Matrix<Character> map = inputAsCharMatrix(input);
-        Destinations destinations = destinations(map);
-        Position start = destinations.start;
-        Position end = destinations.end;
-        Cache cache = new Cache();
-
-        Deque<Path> queue = new LinkedList<>();
-        for (var m: possibleMovements(start, EAST, map)) {
-            queue.addFirst(new Path(m));
-        }
-        long iteration = 0;
-
-        while (!queue.isEmpty()) {
-            if (iteration % 50000 == 0) {
-                int nEntries = cache.hashMap.size();
-                int completedEntries = (int) cache.hashMap.values().stream().filter(Cache.Entry::isCompleted).count();
-                System.out.println("Iteration %d -> Queue size %d Current Best %d cache entries %d/%d".formatted(iteration, queue.size(), cache.bestCost, completedEntries, nEntries));
-            }
-            Path path = queue.pop();
-            Movement lastMovement = path.end();
-            if (lastMovement.to.equals(end)) {
-                cache.updateIfBest(path);
-                //Update the cache
-                cache.updatePaths(path);
-                continue;
-            }
-            //Check if we already have all the options from here
-            Optional<Cache.Entry> entry = cache.getIfCompleted(lastMovement);
-            if (entry.isPresent()) {
-                Optional<Path> best = entry.get().best();
-                if (best.isPresent()) {
-                    Path newPath = new Path(path, best.get());
-                    cache.updateIfBest(newPath);
-                    cache.updatePaths(newPath);
-                }
-            } else {
-                List<Movement> movements = possibleMovements(lastMovement.to, lastMovement.direction, map);
-                cache.newEntry(lastMovement, movements);
-                for (var m: movements) {
-                    if (!path.inPath(m.to)) {
-                        Path newPath = new Path(path, m);
-                        if (newPath.cost() < cache.bestCost) {
-                            queue.addFirst(newPath);
-                        }
-                    }
-
-                }
-            }
-
-            iteration++;
-        }
-        if (cache.bestPath == null) {
-            throw new RuntimeException("No path found");
-        }
-
-        System.out.println(map.map(i -> {
-            if (cache.bestPath.inPath(i.position())) {
-                Movement m = cache.bestPath.at(i.position());
-                return switch (m.direction) {
-                    case EAST -> '>';
-                    case WEST -> '<';
-                    case NORTH -> '^';
-                    case SOUTH -> 'v';
-                    default -> '.';
-                };
-            } else {
-                return i.value();
-            }
-        }));
-        return Long.toString(cache.bestCost);
-    }
-
-    private static String usingGraph(InputStream input) {
-        Matrix<Character> map = inputAsCharMatrix(input);
-        Destinations destinations = destinations(map);
-        Position start = destinations.start;
-        Position end = destinations.end;
-        record Node(Position position, Direction direction) {}
+    private static Graph<Node, DefaultWeightedEdge> createGraph(MazeMap map) {
         Graph<Node, DefaultWeightedEdge> graph =
                 new DefaultDirectedWeightedGraph<>(DefaultWeightedEdge.class);
-        graph.addVertex(new Node(start, EAST));
+        graph.addVertex(new Node(map.start, EAST));
         map.items().filter(i -> i.value() != '#').forEach(i -> {
             Position position = i.position();
             i.orthogonalNeighbours().asMap(true).forEach((dir, neighbour) -> {
@@ -334,20 +85,121 @@ public class Day16 implements Runner.Solution {
                     }
                     Node dest = new Node(neighbour.position(), dir);
                     graph.addEdge(node, dest);
-                    graph.setEdgeWeight(node, dest, distance == 0 ? 1 : 1001);
+                    graph.setEdgeWeight(node, dest, node.cost(dest));
                 }
             });
         });
-        Node startNode = new Node(start, EAST);
-        List<Node> endNodes = graph.vertexSet().stream().filter(n -> n.position.equals(end)).toList();
-        DijkstraShortestPath<Node, DefaultWeightedEdge> algorithm = new DijkstraShortestPath<>(graph);
-        int res = endNodes.stream().mapToInt(node -> (int) algorithm.getPath(startNode, node).getWeight()).min().orElseThrow();
-        return Integer.toString(res);
+        return graph;
     }
 
     @Override
+    public String part1(InputStream input, String... params) {
+        MazeMap map = parseMap(input);
+        var graph = createGraph(map);
+        Node startNode = new Node(map.start, EAST);
+        List<Node> endNodes = graph.vertexSet().stream().filter(n -> n.position.equals(map.end)).toList();
+        DijkstraShortestPath<Node, DefaultWeightedEdge> algorithm = new DijkstraShortestPath<>(graph);
+        int min = Integer.MAX_VALUE;
+        for (var node:endNodes) {
+            var path = algorithm.getPath(startNode, node);
+            int shortestPath = (int) path.getWeight();
+            if (shortestPath < min) {
+                min = shortestPath;
+            }
+        }
+        return Integer.toString(min);
+    }
+
+
+    @Override
     public String part2(InputStream input, String... params) {
-        return inputAsString(input).toLowerCase();
+        MazeMap map = parseMap(input);
+        var graph = createGraph(map);
+        Node startNode = new Node(map.start, EAST);
+        List<Node> endNodes = graph.vertexSet().stream().filter(n -> n.position.equals(map.end)).toList();
+        DijkstraShortestPath<Node, DefaultWeightedEdge> algorithm = new DijkstraShortestPath<>(graph);
+        Node endNode = endNodes.get(0);
+        int minCost = Integer.MAX_VALUE;
+        GraphPath<Node, DefaultWeightedEdge> shortestPath = null;
+        for (var node:endNodes) {
+            var path = algorithm.getPath(startNode, node);
+            if (path.getWeight() < minCost) {
+                endNode = node;
+                minCost = (int) path.getWeight();
+                shortestPath = path;
+            }
+        }
+        List<GraphPath<Node, DefaultWeightedEdge>> paths = new ArrayList<>();
+        paths.add(shortestPath);
+        Deque<GraphPath<Node, DefaultWeightedEdge>> toProcess = new LinkedList<>();
+        toProcess.add(shortestPath);
+
+        record Candidate(Node node, int currentCost, Node divergingAt, Node original) {}
+
+        Map<Node, Integer> accruedCosts = new HashMap<>();
+        Set<Position> visited = new HashSet<>();
+
+        while (!toProcess.isEmpty()) {
+            GraphPath<Node, DefaultWeightedEdge> path = toProcess.pop();
+            int cost = 0;
+            List<Node> nodes = path.getVertexList();
+            Node lastNodeInPath = nodes.get(nodes.size() - 1);
+            accruedCosts.put(lastNodeInPath, (int) path.getWeight());
+            for (int i = 0; i < nodes.size() - 1; i++) {
+                Node n1 = nodes.get(i);
+                Node n2 = nodes.get(i + 1);
+                int stepCost = (int) graph.getEdgeWeight(graph.getEdge(n1, n2));
+                cost += stepCost;
+                accruedCosts.put(n1, cost);
+                visited.add(n1.position);
+                visited.add(n2.position);
+            }
+
+
+            List<Candidate> candidates = nodes.stream().filter(n -> !n.equals(lastNodeInPath)).flatMap(n -> map.at(n.position)
+                            .orthogonalNeighbours()
+                            .stream()
+                            .filter(Objects::nonNull)
+                            .filter(i -> i.value() != '#')
+                            .filter(i -> !visited.contains(i.position()))
+                            .map(i -> {
+                                Node nextNode = nodes.get(nodes.indexOf(n) + 1);
+                                return new Candidate(
+                                        new Node(i.position(), Direction.fromPosition(n.position, i.position())),
+                                        accruedCosts.get(n),
+                                        n,
+                                        nextNode);
+                            }))
+                            .toList();
+            System.out.printf("Checking %d candidates...%n", candidates.size());
+            for (var candidate:candidates) {
+                var p = algorithm.getPath(candidate.node, endNode);
+                if (p == null) {
+                    continue;
+                }
+                //We need to figure out the difference between going from the diverging point to the next in path
+                //and from diverging and the new path
+                int diff = candidate.divergingAt.cost(candidate.original) - candidate.divergingAt.cost(candidate.node);
+                if (p.getWeight() + candidate.currentCost - diff == path.getWeight()) {
+                    paths.add(p);
+                    toProcess.add(p);
+                }
+            }
+        }
+
+        Set<Position> bestPositions = paths.stream().flatMap(p -> p.getVertexList().stream())
+                .map(Node::position)
+                .collect(Collectors.toSet());
+        if (Logger.getLevel() == Logger.Level.DEBUG) {
+            Set<Position> shortestPathPositions = shortestPath.getVertexList().stream().map(Node::position).collect(Collectors.toSet());
+            System.out.println(map.map(i -> {
+                if (shortestPathPositions.contains(i.position())) {
+                    return 'o';
+                }
+                return bestPositions.contains(i.position()) ? 'O' : i.value();
+            }));
+        }
+        return Integer.toString(bestPositions.size());
     }
 }
 
