@@ -53,4 +53,8 @@ public record Position(int row, int col) implements Comparable<Position> {
             case NORTH -> new Position(row - distance, col);
         };
     }
+
+    public int manhattanDistance(Position other) {
+        return Math.abs(this.row - other.row) + Math.abs(this.col - other.col);
+    }
 }

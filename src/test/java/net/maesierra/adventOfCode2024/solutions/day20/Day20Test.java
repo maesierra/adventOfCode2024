@@ -32,9 +32,28 @@ class Day20Test {
         assertThat(part1(new Day20(), "input_20", seconds), equalTo(expected));
     }
 
-    @Test
-    void  testPart2() {
-        String expected = "09:30, 4h 20min, 13:50, 46.00€";
-        assertThat(part2(new Day20(), "input_20"), equalTo(expected));
+    @ValueSource(strings = {
+            "285,50",
+            "253,52",
+            "222,54",
+            "193,56",
+            "154,58",
+            "129,60",
+            "106,62",
+             "86,64",
+             "67,66",
+             "55,68",
+             "41,70",
+             "29,72",
+              "7,74",
+              "3,76"
+    })
+    @ParameterizedTest
+    void  testPart2(String expectedAnSeconds) {
+        String[] parts = expectedAnSeconds.split(",");
+        String expected = parts[0];
+        String seconds = parts[1];
+        assertThat(part2(new Day20(), "input_20", seconds), equalTo(expected));
     }
+
 }
