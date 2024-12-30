@@ -1,6 +1,8 @@
 package net.maesierra.adventOfCode2024.solutions.day21;
 
 import net.maesierra.adventOfCode2024.Runner;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
@@ -10,6 +12,7 @@ import org.jgrapht.graph.DefaultEdge;
 import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Map.entry;
 import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsStream;
@@ -17,41 +20,74 @@ import static net.maesierra.adventOfCode2024.utils.IOHelper.inputAsString;
 
 public class Day21 implements Runner.Solution {
 
+    public static final Movement MOVEMENT_TO_A = new Movement('A');
+
+    public static class Movement {
+        private final char direction;
+        private int n;
+
+        public Movement(char direction) {
+            this.direction = direction;
+            this.n = 1;
+        }
+
+        public void increase() {
+            this.n++;
+        }
+
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == null || getClass() != o.getClass()) return false;
+            Movement movement = (Movement) o;
+            return n == movement.n && Objects.equals(direction, movement.direction);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(direction, n);
+        }
+
+        @Override
+        public String toString() {
+            return StringUtils.repeat(direction, n);
+        }
+    }
     public interface Keypad {
-        default Set<String> movesFor(String code) {
+        default Set<List<Movement>> movesFor(String code) {
             if (code.length() == 2) {
-                Set<String> res = getBestMovement(code);
+                Set<List<Movement>> res = getBestMovement(code);
                 if (res == null) {
                     throw new RuntimeException("We've got a problem for " + code);
                 }
                 return res;
             }
-            Set<String> rest = movesFor(code.substring(1));
-            Set<String> res = new HashSet<>();
-            Set<String> allFromFirstToSecond = getBestMovement(code.substring(0, 2));
+            Set<List<Movement>> rest = movesFor(code.substring(1));
+            Set<List<Movement>> res = new HashSet<>();
+            Set<List<Movement>> allFromFirstToSecond = getBestMovement(code.substring(0, 2));
             if (allFromFirstToSecond == null) {
                 throw new RuntimeException("We've got a problem for " + code.substring(0, 2));
             }
             for (var moveFromFirstToSecond : allFromFirstToSecond) {
                 for (var restOfMovements : rest) {
-                    res.add(moveFromFirstToSecond + restOfMovements);
+                    res.add(Stream.concat(moveFromFirstToSecond.stream(), restOfMovements.stream()).toList());
                 }
             }
             return res;
         }
 
-        Set<String> getBestMovement(String code);
+        Set<List<Movement>> getBestMovement(String code);
     }
 
     static abstract class SimpleKeypad implements Keypad {
-        private final Map<String, Set<String>> bestMovementsMap;
+        private final Map<String, Set<List<Movement>>> bestMovementsMap;
 
         @Override
-        public Set<String> getBestMovement(String code) {
+        public Set<List<Movement>> getBestMovement(String code) {
             return bestMovementsMap.get(code);
         }
 
-        protected SimpleKeypad(Set<String> buttons, Graph<String, DefaultEdge> keys, Map<String, Map<String, String>> movements) {
+        protected SimpleKeypad(Set<String> buttons, Graph<String, DefaultEdge> keys, Map<String, Map<String, String>> movements, Map<String, Set<String>> discardedOptions) {
             var algorithm = new AllDirectedPaths<>(keys);
             var dijkstra = new DijkstraShortestPath<>(keys);
             bestMovementsMap = new HashMap<>();
@@ -65,17 +101,34 @@ public class Day21 implements Runner.Solution {
                         //Get all the possible paths with the same size
                         var allPaths = algorithm.getAllPaths(from, to, true, best.getLength());
                         bestMovementsMap.put(from + to, allPaths.stream().map(path -> {
-                            StringBuilder res = new StringBuilder();
+                            List<Movement> res = new ArrayList<>();
                             String current = path.getStartVertex();
                             for (String v : path.getVertexList().subList(1, path.getVertexList().size())) {
-                                res.append(movements.get(current).get(v));
+                                char direction = movements.get(current).get(v).charAt(0);
+                                if (res.isEmpty()) {
+                                    res.add(MOVEMENT_TO_A);
+                                    res.add(new Movement(direction));
+                                } else {
+                                    Movement last = res.get(res.size() - 1);
+                                    if (last.direction == direction) {
+                                        last.increase();
+                                    } else {
+                                        res.add(new Movement(direction));
+                                    }
+                                }
                                 current = v;
                             }
-                            return res.append("A").toString();
-                        }).collect(Collectors.toSet()));
+                            if (discardedOptions.getOrDefault(from + to, Set.of()).contains(res.stream().map(Movement::toString).collect(Collectors.joining()))) {
+                                return null;
+                            }
+                            res.add(MOVEMENT_TO_A);
+                            return res;
+                        })
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet()));
                     }
                 }
-                bestMovementsMap.put(from + from, Set.of("A"));
+                bestMovementsMap.put(from + from, Set.of(List.of(MOVEMENT_TO_A, MOVEMENT_TO_A)));
             }
         }
 
@@ -167,7 +220,7 @@ public class Day21 implements Runner.Solution {
 
 
         public NumericKeypad() {
-            super(buttons, buildGraph(), movements);
+            super(buttons, buildGraph(), movements, Map.of());
         }
 
         String run(String sequence) {
@@ -227,76 +280,91 @@ public class Day21 implements Runner.Solution {
         }
 
         public DirectionalKeypad() {
-            super(buttons, buildGraph(), movements);
+            super(buttons, buildGraph(), movements, Map.of(
+                    "A<", Set.of("A<v<"),
+                    "<A", Set.of("A>^>")
+            ));
 
         }
 
     }
 
     static class KeypadChain {
-        private final List<Keypad> keypads;
+        private final NumericKeypad numeric = new NumericKeypad();
+        private final DirectionalKeypad directional = new DirectionalKeypad();
+        private final int levels;
+        record State(char from, char to, int level) {}
+        private final Map<State, Long> cache = new HashMap<>();
 
-        KeypadChain(List<Keypad> keypads) {
-            this.keypads = keypads;
+        KeypadChain() {
+            this(2);
+        }
+        KeypadChain(int levels) {
+            this.levels = levels;
         }
 
-        String shortestSequence(String code) {
-            Deque<String> sequences = new LinkedList<>();
-            sequences.add(code);
-            for (int chainOrder = 0; chainOrder < keypads.size(); chainOrder++) {
-                Keypad keypad = keypads.get(chainOrder);
-                Deque<String> nextSequences = new LinkedList<>();
-                while (!sequences.isEmpty()) {
-                    String current = sequences.pop();
-                    if (!current.startsWith("A")) {
-                        current = "A" + current;
-                    }
-                    Set<String> options = keypad.movesFor(current);
-                    System.out.printf("%s[%d] -> %d%n", current, chainOrder, options.size());
-                    nextSequences.addAll(options);
-                }
-                sequences = nextSequences;
+        long shortestSequence(State state) {
+            if (state.level > levels) {
+                return 1L;
             }
-            return sequences.stream().min(Comparator.comparing(String::length)).orElseThrow();
-        }
-        String shortestSequence2(String code) {
-            Deque<String> sequences = new LinkedList<>();
-            sequences.add(code);
-            for (int chainOrder = 0; chainOrder < keypads.size(); chainOrder++) {
-                Keypad keypad = keypads.get(chainOrder);
-                Deque<String> nextSequences = new LinkedList<>();
-                while (!sequences.isEmpty()) {
-                    String current = sequences.pop();
-                    if (!current.startsWith("A")) {
-                        current = "A" + current;
-                    }
-                    Set<String> options = keypad.movesFor(current);
-                    System.out.printf("%s[%d] -> %d%n", current, chainOrder, options.size());
-                    if (chainOrder == 0) {
-                        nextSequences.addAll(options);
-                    } else {
-                       nextSequences.add(options.stream().min(Comparator.comparing(String::length)).stream().findFirst().orElseThrow());
-                    }
-                }
-                sequences = nextSequences;
+            Long cached = cache.get(state);
+            if (cached != null) {
+                return cached;
             }
-            return sequences.stream().min(Comparator.comparing(String::length)).orElseThrow();
+            //level 0 == numeric keypad
+            Keypad keypad = state.level == 0 ? numeric : directional;
+            Set<List<Movement>> movements = keypad.getBestMovement("%s%s".formatted(state.from, state.to));
+            long min = Long.MAX_VALUE;
+            for (var movement:movements) {
+                long value = connectedPairs(movement).stream()
+                        .mapToLong(pair -> {
+                            return shortestSequence(new State(pair.getLeft().direction, pair.getRight().direction, state.level + 1)) + (pair.getLeft().n - 1);
+                        })
+                        .sum();
+                min = Math.min(min, value);
+            }
+            cache.put(state, min);
+            return min;
         }
+
+        long shortestSequence(String code) {
+           return connectedPairs(code).stream()
+                   .mapToLong(pair -> shortestSequence(new State(pair.getLeft(), pair.getRight(), 0)))
+                   .sum();
+        }
+
+    }
+
+    static List<Pair<Character, Character>> connectedPairs(String str) {
+        return connectedPairs(str.chars().mapToObj(i -> (char)i).toList());
+    }
+    static <T> List<Pair<T, T>> connectedPairs(List<T> list) {
+        List<Pair<T, T>> res = new ArrayList<>();
+        for (int i = 0; i < list.size() - 1; i++) {
+            res.add(Pair.of(list.get(i), list.get(i + 1)));
+        }
+        return res;
     }
 
     @Override
     public String part1(InputStream input, String... params) {
-        KeypadChain keypadChain = new KeypadChain(List.of(new NumericKeypad(), new DirectionalKeypad(), new DirectionalKeypad()));
-        int res = inputAsStream(input).mapToInt(code -> {
-            String translated = keypadChain.shortestSequence(code);
-            System.out.printf("Code %s => %s(%d) %n", code, translated, translated.length());
-            return translated.length() * Integer.parseInt(code.replace("A", ""));
+        KeypadChain keypadChain = new KeypadChain();
+        long res = inputAsStream(input).mapToLong(code -> {
+            long length = keypadChain.shortestSequence("A" + code);
+            System.out.printf("Code %s => %d %n", code, length);
+            return length * Long.parseLong(code.replace("A", ""));
         }).sum();
-        return Integer.toString(res);
+        return Long.toString(res);
     }
 
     @Override
     public String part2(InputStream input, String... params) {
-        return inputAsString(input).toLowerCase();
+        KeypadChain keypadChain = new KeypadChain(25);
+        long res = inputAsStream(input).mapToLong(code -> {
+            long length = keypadChain.shortestSequence("A" + code);
+            System.out.printf("Code %s => %d %n", code, length);
+            return length * Long.parseLong(code.replace("A", ""));
+        }).sum();
+        return Long.toString(res);
     }
 }
